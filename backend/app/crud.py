@@ -163,7 +163,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
     # 4. 通过 clean_title(media_title) 进行匹配
     if media := find_media_by_clean_title(db, torinfo.clean_title):
         # 根据 torname_regex 进行确认：stip_title 匹配上了，但是如果用户手工指定了 torname_regex 则在此进行检查
-        if re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
+        if media.torname_regex and re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
             logger.info(f"LOCAL: Found media by clean_title: {torinfo.clean_title}")
             create_torrent(db, torinfo, media.id)
             return media

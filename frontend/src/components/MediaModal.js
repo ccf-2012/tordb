@@ -108,6 +108,17 @@ function MediaModal({ media, onSave, onClose }) {
             />
           </Form.Group>
 
+          <Form.Group className="mb-3">
+            <Form.Label>Clean Title</Form.Label>
+            <Form.Control 
+              type="text" 
+              name="clean_title" 
+              value={formData.clean_title || ''} 
+              onChange={handleChange} 
+              placeholder='e.g., "My Movie Title"'
+            />
+          </Form.Group>
+
           {/* TMDb Details Section */}
           <h5 className="mt-4">TMDb Matching</h5>
           <hr />

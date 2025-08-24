@@ -333,7 +333,7 @@ function App() {
 
   return (
     <Container fluid className="mt-4" style={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
-      <h1 className="mb-4">TMDb Media Manager</h1>
+      <h3 className="mb-4">TMDb Media Manager</h3>
       {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
       <Row className="mb-3">
         <Col lg={5} md={6} xs={12} className="mb-2 mb-md-0">
