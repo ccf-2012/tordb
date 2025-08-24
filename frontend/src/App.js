@@ -253,7 +253,7 @@ function App() {
             </div>
           ),
           disableSortBy: true, // Disable sorting on poster
-          width: 52,
+          width: 60,
         },
         {
           Header: '媒体详情',
@@ -318,7 +318,7 @@ function App() {
           disableSortBy: true, // Disable sorting on actions
           Cell: ({ row }) => (
             <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                <Button variant="outline-warning" size="sm" className="me-1" onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
+                <Button variant="outline-warning" size="sm" onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
                 <Button variant="outline-danger" size="sm" onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
             </div>
           ),
@@ -348,14 +348,14 @@ function App() {
           </InputGroup>
         </Col>
         <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
+          <InputGroup>
             <FormControl
               placeholder="Filter loaded items..."
               value={localFilter}
               onChange={e => setLocalFilter(e.target.value)}
             />
-        </Col>
-        <Col lg={3} xs={12} className="text-lg-end">
-          <Button variant="success" onClick={() => handleOpenModal()}>+ Add Manually</Button>
+            <Button variant="success" onClick={() => handleOpenModal()}>+ Add Manually</Button>
+          </InputGroup>
         </Col>
       </Row>
 
