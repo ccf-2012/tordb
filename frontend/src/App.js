@@ -55,13 +55,13 @@ function Table({ columns, data, onEdit, onDelete }) {
 
   return (
     <div className="table-responsive">
-      <table {...getTableProps()} className="table table-sm table-hover" style={{  width: '100%' }}>
+      <table {...getTableProps()} className="table table-sm table-hover" style={{ tableLayout: 'fixed', width: '100%' }}>
         <thead className="thead-dark">
           {headerGroups.map(headerGroup => (
             <tr {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map(column => (
                 // Add sorting props to the header
-                <th {...column.getHeaderProps(column.getSortByToggleProps())} style={{ width: column.width, cursor: 'pointer' }}>
+                <th {...column.getHeaderProps(column.getSortByToggleProps())} style={{ minWidth: column.minWidth, width: column.width, maxWidth: column.maxWidth, cursor: 'pointer' }}>
                   {column.render('Header')}
                   {/* Add a sort direction indicator */}
                   <span>
@@ -83,14 +83,14 @@ function Table({ columns, data, onEdit, onDelete }) {
               <React.Fragment key={row.getRowProps().key}>
                 <tr {...row.getRowProps({ onClick: () => row.toggleRowExpanded(), style: { cursor: 'pointer' } })}>
                   {row.cells.map(cell => (
-                    <td {...cell.getCellProps()}>{cell.render('Cell')}</td>
+                    <td {...cell.getCellProps({style: {minWidth: cell.column.minWidth, width: cell.column.width, maxWidth: cell.column.maxWidth}})}>{cell.render('Cell')}</td>
                   ))}
                 </tr>
                 {row.isExpanded ? (
                   <tr>
                     <td colSpan={visibleColumns.length} className="p-0">
                       <div className="p-3 bg-light">
-                        <h5>Torrents for {row.original.tmdb_title}</h5>
+                        <h7>Torrents for {row.original.tmdb_title}</h7>
                         <ul className="list-group">
                           {row.original.torrents.map(t => 
                             <li key={t.id} className="list-group-item">{t.name}</li>
@@ -253,9 +253,7 @@ function App() {
             </div>
           ),
           disableSortBy: true, // Disable sorting on poster
-          width: 60,
-          maxWidth: 70,
-          minWidth: 50,
+          width: 52,
         },
         {
           Header: '媒体详情',
@@ -276,11 +274,11 @@ function App() {
               </p>
             </div>
           ),
-          // No width or minWidth for Details to allow it to expand
         },
         {
           Header: 'Clean Title',
           accessor: 'clean_title',
+          width: 50,
         },
       ];
 
@@ -300,14 +298,14 @@ function App() {
                 ))}
               </ul>
             ),
-            width: 50,
+            width: 40,
           },
           {
             Header: '种子',
             accessor: 'torrents',
             Cell: ({ value }) => value.length,
             sortType: 'basic',
-            width: 10,
+            width: 20,
 
           }
         );
@@ -324,7 +322,7 @@ function App() {
                 <Button variant="outline-danger" size="sm" onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
             </div>
           ),
-          width: 20,
+          width: 30,
         }
       );
 
