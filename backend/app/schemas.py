@@ -5,6 +5,7 @@ from typing import List, Optional
 
 class Query(BaseModel):
     torname: str
+    subtitle: Optional[str] = None
     extitle: Optional[str] = None
     imdbid: Optional[str] = None
     tmdbstr: Optional[str] = None
@@ -29,7 +30,9 @@ class Torrent(TorrentBase):
 # --- Media Schemas ---
 
 class MediaBase(BaseModel):
-    torname_regex: str
+    torname_regex: Optional[str] = None
+    clean_title: str
+    cntitle: Optional[str] = None
     tmdb_id: Optional[int] = None
     tmdb_title: Optional[str] = None
     tmdb_cat: Optional[str] = None
@@ -51,6 +54,8 @@ class MediaCreate(MediaBase):
 
 class MediaUpdate(MediaBase):
     torname_regex: Optional[str] = None
+    clean_title: Optional[str] = None
+    cntitle: Optional[str] = None
     tmdb_id: Optional[int] = None
     tmdb_title: Optional[str] = None
     tmdb_cat: Optional[str] = None

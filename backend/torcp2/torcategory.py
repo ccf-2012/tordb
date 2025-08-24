@@ -24,6 +24,7 @@ class CategoryItem:
 
 
 class TorCategory:
+    """A class to categorize torrents based on their names."""
     # def __init__(self):
     # 有些组生产 TV Series，但是在种子名上不显示 S01 这些
     TV_GROUPS = ['CMCTV', 'FLTTH']
@@ -67,6 +68,7 @@ class TorCategory:
     CategorySummary = []
 
     def __init__(self, torName):
+        """Initializes the TorCategory object and guesses the category of the torrent."""
         self.ccfcat, self.group = self.guessByName(torName)
 
 
@@ -102,7 +104,7 @@ class TorCategory:
         elif re.search(r'(\d+册|\d+期|\d+版|\d+本|\d+年|\d+月|系列|全集|作品集).?$',
                        torName):
             self.setCategory('eBook')
-        elif re.search(r'(\bConcert|演唱会|音乐会|\bLive[. ](At|in))\b', torName, re.A | re.I):
+        elif re.search(r'(\bConcert|演唱会|音乐会)\b', torName, re.A | re.I):
             self.setCategory('MV')
         elif re.search(r'\bBugs!.?\.mp4', torName, re.I):
             self.setCategory('MV')

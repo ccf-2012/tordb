@@ -42,13 +42,13 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
     """
     This endpoint mirrors the logic of the original Flask query, accepting a JSON body.
     """
-    torinfo = TorrentParser.parse(query.torname)
-    if not torinfo.media_title:
+    torinfo = TorrentParser.parse(query.torname, query.subtitle)
+    if not torinfo.clean_title:
         raise HTTPException(status_code=400, detail="Could not parse a valid media title from torname")
 
     # Augment torinfo with optional data from the query payload
     if query.extitle:
-        torinfo.subtitle = query.extitle
+        torinfo.extitle = query.extitle
     if query.imdbid:
         torinfo.imdb_id = query.imdbid
     if query.tmdbstr:
@@ -72,6 +72,7 @@ def create_media(media: schemas.MediaCreate, db: Session = Depends(get_db)):
 @app.post("/api/media/from-tmdb/", response_model=schemas.Media)
 def create_media_from_tmdb(
     torname_regex: str,
+    clean_title: str,
     tmdb_cat: str,
     tmdb_id: int,
     db: Session = Depends(get_db)
@@ -95,6 +96,7 @@ def create_media_from_tmdb(
         tmdb_overview = n1.overview
 
         media_create = schemas.MediaCreate(
+            clean_title=clean_title,
             torname_regex=torname_regex,
             tmdb_id=tmdb_id,
             tmdb_title=tmdb_title,

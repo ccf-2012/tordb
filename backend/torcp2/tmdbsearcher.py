@@ -45,7 +45,7 @@ class TMDbSearcher:
              release_date = getattr(result, 'first_air_date', None)
 
         if release_date:
-            torinfo.year = self.getYear(release_date)
+            torinfo.year = self._get_year_from_datestr(release_date)
             torinfo.release_air_date = release_date
         else:
             torinfo.year = 0
@@ -74,14 +74,14 @@ class TMDbSearcher:
             if details:
                 # Overwrite torinfo with full details
                 self._save_tmdb_result(torinfo, details, torinfo.tmdb_cat)
-                self.fillTMDbDetails(torinfo, details) # Pass details to avoid re-fetching
+                self._fill_tmdb_details(torinfo, details) # Pass details to avoid re-fetching
                 return True
 
         except Exception as e:
             logger.error(f"Error searching TMDb by ID {torinfo.tmdb_id}: {e}")
         return False
 
-    def searchTMDbByIMDbId(self, torinfo):
+    def search_by_imdb_id(self, torinfo):
         if not torinfo.imdb_id.startswith('tt'):
             logger.error(f"Invalid IMDb ID: {torinfo.imdb_id}")
             return False
@@ -95,21 +95,22 @@ class TMDbSearcher:
 
             if results[preferred_results]:
                 self._save_tmdb_result(torinfo, results[preferred_results][0])
-                self.fillTMDbDetails(torinfo)
+                self._fill_tmdb_details(torinfo)
                 return True
             elif results[other_results]:
                 self._save_tmdb_result(torinfo, results[other_results][0])
-                self.fillTMDbDetails(torinfo)
+                self._fill_tmdb_details(torinfo)
                 return True
         except Exception as e:
             logger.error(f"Error searching TMDb by IMDb ID {torinfo.imdb_id}: {e}")
         
         return False
 
-    def _perform_search(self, search_term, search_cat, year, stryear):
+    def _perform_search(self, search_term, search_cat, year):
         search = Search()
         results = []
-        
+        stryear = str(year) if year else None
+
         logger.info(f'Searching for "{search_term}" in [{search_cat}] with year: {year or "any"}')
 
         try:
@@ -124,21 +125,23 @@ class TMDbSearcher:
             return None, None
 
         if not results:
+            # TODO: search without year?
+            
             return None, None
 
         # Strict year match
-        result = self.findYearMatch(results, year, strict=True)
+        result = self._find_year_match(results, year, strict=True)
         if result:
             return result, 'strict'
 
         # Fuzzy year match
-        result = self.findYearMatch(results, year, strict=False)
+        result = self._find_year_match(results, year, strict=False)
         if result:
             return result, 'fuzzy'
             
         # No year match (or year was 0)
         if not year:
-             return self.findYearMatch(results, 0), 'any'
+             return self._find_year_match(results, 0), 'any'
 
         return None, None
 
@@ -164,36 +167,25 @@ class TMDbSearcher:
 
         return ''
 
-    def _searchTMDb(self, torinfo):
+    def _search_tmdb(self, torinfo):
         torinfo.confidence = 0
-        title = torinfo.media_title
-        cntitle = torinfo.subtitle
-        stryear, intyear = self.fixYear(torinfo)
+        title = torinfo.clean_title
+        cntitle = torinfo.cntitle
+        extitle = torinfo.extitle
+        intyear = self._fix_year(torinfo)
 
         # Title cleaning
         cuttitle = self._clean_title(title)
-        # Category detection
-        if 'the movie' in cuttitle.lower():
-            torinfo.tmdb_cat = 'movie'
-            torinfo.confidence += 5
-
-        cntitle2 = ''
-        if cntitle:
-            cntitle = self._clean_title(cntitle)
-            cntitle2 = self._generate_cntitle2(cntitle)
-        
         torinfo.confidence += len(cuttitle)
         if cntitle:
             torinfo.confidence += 10
 
-
-        search_list = self._build_search_list(torinfo, cntitle, cuttitle, cntitle2)
-
+        search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
         for category, term in search_list:
             if not term:
                 continue
 
-            result, match_type = self._perform_search(term, category, intyear, stryear)
+            result, match_type = self._perform_search(term, category, intyear)
 
             if result:
                 if category == 'multi':
@@ -209,7 +201,7 @@ class TMDbSearcher:
                 if category != 'multi':
                     torinfo.confidence += 5
                 
-                self.fillTMDbDetails(torinfo)
+                self._fill_tmdb_details(torinfo)
                 return True
 
         logger.warning(f'TMDb Not found: [{title}] [{cntitle}]')
@@ -225,23 +217,23 @@ class TMDbSearcher:
         title = re.sub(r'(\b国粤双语|[\b\(]?\w+版|\b\d+集全).*$', '', title, flags=re.I)
         title = re.sub(r'(The[\s\.]*(Complete\w*|Drama\w*|Animate\w*)?[\s\.]*Series|The\s*Movie)\s*$', '', title, flags=re.I)
         title = re.sub(r'\b(Season\s?\d+)\b', '', title, flags=re.I)
-        title = self.replaceRomanNum(title)
+        title = self._replace_roman_num(title)
         return title.strip()
 
-    def _build_search_list(self, torinfo, cntitle, cuttitle, cntitle2):
+    def _build_search_list(self, torinfo, cntitle, cuttitle, extitle):
         # Builds the list of searches to perform
         searches = []
         if torinfo.season:
             torinfo.confidence += 10
-            searches = [('tv', cntitle), ('tv', cuttitle), ('multi', cntitle), ('multi', cntitle2)]
+            searches = [('tv', cntitle), ('tv', cuttitle), ('multi', extitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
             torinfo.confidence += 5
-            searches = [('tv', cntitle), ('multi', cuttitle), ('multi', cntitle2)]
+            searches = [('tv', cntitle), ('multi', cuttitle), ('multi', extitle)]
         elif torinfo.tmdb_cat == 'movie':
             torinfo.confidence += 5
-            searches = [('movie', cntitle),  ('movie', cuttitle), ('movie', cntitle2), ('multi', cntitle), ('multi', cuttitle)]
+            searches = [('movie', cntitle),  ('movie', cuttitle), ('movie', extitle), ('multi', cuttitle), ('multi', cntitle)]
         else:
-            searches = [('multi', cntitle), ('multi', cuttitle), ('multi', cntitle2), ('tv', cuttitle), ('movie', cuttitle)]
+            searches = [('multi', cntitle), ('multi', cuttitle), ('multi', extitle), ('tv', cuttitle), ('movie', cuttitle)]
 
         # 过滤掉搜索关键字为空的条目，并移除重复的条目
         unique_list = list(dict.fromkeys(item for item in searches if item[1]))
@@ -251,41 +243,41 @@ class TMDbSearcher:
             return sorted(unique_list, key=lambda x: x[1] != cuttitle)
         return unique_list
 
-    def searchTMDb(self, torinfo):
+    def search_tmdb(self, torinfo):
         try:
-            return self._searchTMDb(torinfo)
+            return self._search_tmdb(torinfo)
         except Exception as e:
             logger.error(f"An unexpected error occurred during TMDb search: {e}", exc_info=True)
             return False
 
     # --- Utility Functions ---
     
-    def getYear(self, datestr):
+    def _get_year_from_datestr(self, datestr):
         if not datestr: return 0
         m = re.search(r'\b(19\d{2}|20\d{2})\b', str(datestr))
         return tryint(m.group(1)) if m else 0
 
-    def getTitle(self, result):
+    def _get_title(self, result):
         return getattr(result, 'name', getattr(result, 'title', getattr(result, 'original_name', getattr(result, 'original_title', ''))))
 
-    def containsCJK(self, text):
+    def contains_cjk(self, text):
         if not text: return False
         return re.search(r'[\u4e00-\u9fa5]', text)
 
-    def replaceRomanNum(self, titlestr):
+    def _replace_roman_num(self, titlestr):
         roman_map = {'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'XI': '11', 'XII': '12', 'XIII': '13', 'XIV': '14', 'XV': '15', 'XVI': '16'}
         for roman, arabic in roman_map.items():
             titlestr = re.sub(f'\\b{roman}\\b', arabic, titlestr, flags=re.IGNORECASE)
         return titlestr
 
-    def findYearMatch(self, results, year, strict=True):
+    def _find_year_match(self, results, year, strict=True):
         matchList = []
         
         # Handle both list and dict from tmdbv3api
         resultlist = results if isinstance(results, list) else results.get('results', [])
 
         for result in resultlist:
-            resyear = self.getYear(getattr(result, 'release_date', '') or getattr(result, 'first_air_date', ''))
+            resyear = self._get_year_from_datestr(getattr(result, 'release_date', '') or getattr(result, 'first_air_date', ''))
             
             if year == 0:
                 matchList.append(result)
@@ -304,12 +296,12 @@ class TMDbSearcher:
         # Prefer item with CJK title if language is Chinese
         if self.tmdb and self.tmdb.language == 'zh-CN':
             for item in matchList[:3]:
-                if self.containsCJK(self.getTitle(item)):
+                if self.contains_cjk(self._get_title(item)):
                     return item
         
         return matchList[0]
 
-    def fixYear(self, torinfo):
+    def _fix_year(self, torinfo):
         intyear = torinfo.year
         if not 1900 < intyear < 2100:
             intyear = 0
@@ -318,9 +310,9 @@ class TMDbSearcher:
         if torinfo.season and 'S01' not in torinfo.season:
             intyear = 0
             
-        return str(intyear) if intyear else None, intyear
+        return intyear
 
-    def getIMDbInfo(self, torinfo):
+    def _get_imdb_info(self, torinfo):
         if not torinfo.imdb_id or not torinfo.imdb_id.startswith('tt'):
             logger.error(f"Invalid IMDb ID provided: {torinfo.imdb_id}")
             return ''
@@ -340,7 +332,7 @@ class TMDbSearcher:
         
         return torinfo.imdb_id
 
-    def fillTMDbDetails(self, torinfo, details=None):
+    def _fill_tmdb_details(self, torinfo, details=None):
         if not torinfo.tmdb_id:
             return torinfo
 

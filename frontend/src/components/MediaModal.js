@@ -48,6 +48,7 @@ function MediaModal({ media, onSave, onClose }) {
     } else {
       setFormData({
         torname_regex: '',
+        clean_title: '',
         tmdb_id: '',
         tmdb_cat: 'movie',
       });

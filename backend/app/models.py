@@ -12,7 +12,9 @@ class Media(Base):
     __tablename__ = "media"
 
     id = Column(Integer, primary_key=True, index=True)
-    torname_regex = Column(String, index=True, nullable=False)
+    torname_regex = Column(String, index=True, nullable=True)
+    clean_title = Column(String, nullable=False)
+    cntitle = Column(String, nullable=True)
     tmdb_id = Column(Integer, index=True, nullable=True)
     imdb_id = Column(String, index=True, nullable=True)
     tmdb_title = Column(String, nullable=True)
