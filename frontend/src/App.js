@@ -139,8 +139,9 @@ function App() {
         const genres = media.tmdb_genres || '';
         const regexList = media.torname_regex_list.join(' ');
         const torrentNames = media.torrents.map(t => t.name).join(' ');
+        const cleanTitle = media.clean_title || '';
 
-        const searchableText = `${title} ${overview} ${genres} ${regexList} ${torrentNames}`.toLowerCase();
+        const searchableText = `${title} ${overview} ${genres} ${regexList} ${torrentNames} ${cleanTitle}`.toLowerCase();
         return searchableText.includes(localFilter.toLowerCase());
     });
   }, [groupedMedia, localFilter]);
@@ -276,6 +277,10 @@ function App() {
             </div>
           ),
           // No width or minWidth for Details to allow it to expand
+        },
+        {
+          Header: 'Clean Title',
+          accessor: 'clean_title',
         },
       ];
 
