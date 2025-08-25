@@ -47,7 +47,7 @@ function Table({ columns, data, onEdit, onDelete }) {
       columns,
       data,
       // Set initial sort state
-      initialState: { sortBy: [{ id: 'tmdb_year', desc: true }] },
+      initialState: { sortBy: [{ id: 'id', desc: true }] },
     },
     useSortBy, // Use sorting
     useExpanded
@@ -318,8 +318,8 @@ function App() {
           disableSortBy: true, // Disable sorting on actions
           Cell: ({ row }) => (
             <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                <Button variant="outline-warning" size="sm" onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
-                <Button variant="outline-danger" size="sm" onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
+                <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
+                <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
             </div>
           ),
           width: 30,

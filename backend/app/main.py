@@ -2,14 +2,13 @@ import os
 import sys
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 
 # Adjust sys.path to allow imports from the parent `backend` directory
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'torcp2')))
 
 from torcp2.tmdbsearcher import TMDbSearcher
 from torcp2.torinfo import TorrentParser, TorrentInfo
-from app import crud, models, schemas
+from app import crud, schemas
 from app.models import SessionLocal, create_db_and_tables
 from app.config import settings
 from app.utils import format_genres

@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
-from tortitle import TorTitle
-from .torsubtitle import TorSubtitle
-
+from tortitle import TorTitle, TorSubtitle
 
 @dataclass
 class TorrentInfo:
@@ -80,7 +78,6 @@ class TorrentParser:
     """种子文件名解析器"""
     @classmethod
     def parse(cls, torname: str, subtitle: Optional[str] = None) -> Optional[TorrentInfo]:
-        # tc = TorCategory(torname)
         tt = TorTitle(torname)
         tst = None
         if subtitle:
