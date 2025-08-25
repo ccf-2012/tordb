@@ -55,7 +55,7 @@ function Table({ columns, data, onEdit, onDelete }) {
 
   return (
     <div className="table-responsive">
-      <table {...getTableProps()} className="table table-sm table-hover" style={{ tableLayout: 'fixed', width: '100%' }}>
+      <table {...getTableProps()} className="table table-sm table-hover" style={{ width: '100%' }}>
         <thead className="thead-dark">
           {headerGroups.map(headerGroup => (
             <tr {...headerGroup.getHeaderGroupProps()}>
@@ -253,7 +253,8 @@ function App() {
             </div>
           ),
           disableSortBy: true, // Disable sorting on poster
-          width: 60,
+          width: 92,
+          minWidth: 92,
         },
         {
           Header: '媒体详情',
@@ -274,18 +275,19 @@ function App() {
               </p>
             </div>
           ),
+          width: '100%',
         },
         {
           Header: 'Clean Title',
           accessor: 'clean_title',
-          width: 50,
+          width: 60,
         },
       ];
 
       if (!isMobile) {
         baseColumns.push(
           {
-            Header: '正则规则',
+            Header: '规则',
             accessor: 'torname_regex_list',
             // Custom sort for number of rules
             sortType: (rowA, rowB) => {
@@ -305,26 +307,23 @@ function App() {
             accessor: 'torrents',
             Cell: ({ value }) => value.length,
             sortType: 'basic',
-            width: 20,
+            width: 30,
 
+          },
+          {
+            Header: '操作',
+            id: 'actions',
+            disableSortBy: true, // Disable sorting on actions
+            Cell: ({ row }) => (
+              <div className="text-center" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
+                  <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
+              </div>
+            ),
+            width: 30,
           }
         );
       }
-
-      baseColumns.push(
-        {
-          Header: '操作',
-          id: 'actions',
-          disableSortBy: true, // Disable sorting on actions
-          Cell: ({ row }) => (
-            <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
-                <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
-            </div>
-          ),
-          width: 30,
-        }
-      );
 
       return baseColumns;
     },
@@ -367,7 +366,7 @@ function App() {
           {totalPages > 0 && (
             <Row className="justify-content-center align-items-center mt-3">
               <Col xs="auto" className="text-muted small me-3">
-                Page {currentPage} of {totalPages} (Total: {totalGroups} items)
+                Page {currentPage} of {totalPages} (Total: {totalGroups} )
               </Col>
               <Col xs="auto">
                 <Pagination size={isMobile ? 'sm' : undefined}>
