@@ -106,7 +106,7 @@ def create_media_from_tmdb(
             tmdb_genres=tmdb_genres,
             tmdb_overview=tmdb_overview
         )
-        new_media = crud.create_media(db, media_create)
+        new_media = crud.create_media(db=db, media=media_create)
         return new_media
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create media from TMDb: {e}")

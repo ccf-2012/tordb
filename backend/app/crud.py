@@ -60,9 +60,16 @@ def find_media_by_imdb_id(db: Session, imdb_id: str) -> models.Media | None:
 
 # --- Create Operations ---
 
-def create_media(db: Session, torinfo: TorrentInfo) -> models.Media:
-    tmdb_genres = format_genres(torinfo)
+def create_media(db: Session, media: schemas.MediaCreate) -> models.Media:
+    db_media = models.Media(**media.model_dump())
+    db.add(db_media)
+    db.commit()
+    db.refresh(db_media)
+    return db_media
 
+
+def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media:
+    tmdb_genres = format_genres(torinfo)
     media_create = schemas.MediaCreate(
         clean_title=torinfo.clean_title,
         cntitle=torinfo.cntitle,
@@ -80,11 +87,7 @@ def create_media(db: Session, torinfo: TorrentInfo) -> models.Media:
         production_countries=torinfo.production_countries,
         tmdb_genres=tmdb_genres
     )
-    db_media = models.Media(**media_create.model_dump())
-    db.add(db_media)
-    db.commit()
-    db.refresh(db_media)
-    return db_media
+    return create_media(db, media_create)
 
 def create_torrent(db: Session, torinfo: TorrentInfo, media_id: int) -> models.Torrent:
     torrent_create = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
@@ -140,7 +143,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             # If not in local DB, fetch from TMDb and create
             if searcher.search_tmdb_by_tmdbid(torinfo):
                 logger.info(f"TMDb: Found media by TMDb ID: {torinfo.tmdb_title}")
-                new_media = create_media(db, torinfo)
+                new_media = create_media_from_torinfo(db, torinfo)
                 create_torrent(db, torinfo, new_media.id)
                 return new_media
 
@@ -155,7 +158,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             # If not in local DB, fetch from TMDb and create
             if searcher.search_by_imdb_id(torinfo):
                 logger.info(f"TMDb: Found media by IMDb ID: {torinfo.tmdb_title}")
-                new_media = create_media(db, torinfo)
+                new_media = create_media_from_torinfo(db, torinfo)
                 create_torrent(db, torinfo, new_media.id)
                 # TODO: 保存 clean_title 和 对应的tmdb_id/tmdb_cat, 以便后续查询可用
                 return new_media
@@ -197,7 +200,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
         # Create new media and torrent
         logger.info(f"TMDb: Found media by blind search: {torinfo.tmdb_title}")
         # TODO: 保存 clean_title 以便后续查询
-        new_media = create_media(db, torinfo)
+        new_media = create_media_from_torinfo(db, torinfo)
         create_torrent(db, torinfo, new_media.id)
         return new_media
 
