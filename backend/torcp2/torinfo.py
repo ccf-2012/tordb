@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
-import os, re, sys
-from .tortitle import TorTitle
+from tortitle import TorTitle
 from .torsubtitle import TorSubtitle
-from .torcategory import TorCategory
 
 
 @dataclass

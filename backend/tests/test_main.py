@@ -40,12 +40,16 @@ client = TestClient(app)
 @pytest.fixture(scope="function", autouse=True)
 def cleanup_database():
     # Before each test, clean the tables
-    for table in reversed(Base.metadata.sorted_tables):
-        engine.execute(table.delete())
+    with TestingSessionLocal() as db:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
+        db.commit()
     yield
     # After each test, clean up again
-    for table in reversed(Base.metadata.sorted_tables):
-        engine.execute(table.delete())
+    with TestingSessionLocal() as db:
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
+        db.commit()
 
 
 # --- Tests ---
