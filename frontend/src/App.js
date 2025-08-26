@@ -280,6 +280,13 @@ function App() {
         {
           Header: 'Clean Title',
           accessor: 'clean_title',
+          Cell: ({ row }) => (
+            <div>
+              <div>{row.original.clean_title}</div>
+              <div className="text-muted small">{row.original.tmdb_year}</div>
+              {row.original.cntitle && <div className="text-muted small">{row.original.cntitle}</div>}
+            </div>
+          ),
           width: 60,
         },
       ];
