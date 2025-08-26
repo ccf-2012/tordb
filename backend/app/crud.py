@@ -34,8 +34,36 @@ def get_all_media(db: Session, skip: int = 0, limit: int = 100):
 def find_torrent_by_name(db: Session, name: str) -> models.Torrent | None:
     return db.query(models.Torrent).filter(models.Torrent.name == name).first()
 
-def find_media_by_clean_title(db: Session, clean_title: str) -> models.Media | None:
-    return db.query(models.Media).filter(models.Media.clean_title == clean_title).first()
+def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | None:
+    # First, find potential candidates based on clean_title
+    candidates = db.query(models.Media).filter(models.Media.clean_title == torinfo.clean_title).all()
+    if not candidates:
+        return None
+
+    # Now, try to find the best match among the candidates
+    for media in candidates:
+        # Score based on matching attributes
+        score = 0
+        if torinfo.tmdb_cat == 'movie' or torinfo.season == 'S01':
+            # Year match is a strong indicator
+            if torinfo.year and media.tmdb_year and abs(media.tmdb_year - int(torinfo.year)) <= 1:
+                score += 3
+        # Title matches (cntitle, extitle) add to the score
+        if torinfo.cntitle and torinfo.cntitle in (media.cntitle, media.tmdb_title):
+            score += 2
+        if torinfo.extitle and torinfo.extitle in (media.cntitle, media.tmdb_title):
+            score += 2
+        
+        # If we have a good score, we can be confident in the match
+        # A score of 2 means year matched, which is a very strong signal.
+        if score >= 2:
+            logger.info(f"Found media by torinfo: {media.tmdb_title} with score {score}")
+            return media
+
+    # If no high-confidence match is found, return the first candidate as a fallback
+    # This preserves the old behavior if no other signals are present.
+    logger.info(f"Fallback: Found media by clean_title: {candidates[0].tmdb_title}")
+    return candidates[0]
 
 def find_media_by_torname_regex(db: Session, title: str, clean_title: str) -> models.Media | None:
     all_media_with_regex = db.query(models.Media).filter(
@@ -164,14 +192,15 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
                 return new_media
 
     # 4. 通过 clean_title(media_title) 进行匹配
-    if media := find_media_by_clean_title(db, torinfo.clean_title):
+    if media := find_media_by_torinfo(db, torinfo):
         # 根据 torname_regex 进行确认：stip_title 匹配上了，但是如果用户手工指定了 torname_regex 则在此进行检查
-        if media.torname_regex and re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
-            logger.info(f"LOCAL: Found media by clean_title: {torinfo.clean_title}")
-            create_torrent(db, torinfo, media.id)
-            return media
-        else:
-            logger.info(f"LOCAL: not match by torname_regex: {torinfo.torname}, clean_title: {torinfo.clean_title}")
+        if media.torname_regex:
+            if re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
+                logger.info(f"LOCAL: Found media by clean_title: {torinfo.clean_title}")
+                create_torrent(db, torinfo, media.id)
+                return media
+            else:
+                logger.info(f"LOCAL: rejected by torname_regex: {torinfo.torname}, clean_title: {torinfo.clean_title}")
           
     # 5. Regex match on torrent name
     # 所有 torname_regex 是用户手工设置，对全 torname 进行匹配

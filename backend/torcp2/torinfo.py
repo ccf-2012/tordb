@@ -26,7 +26,7 @@ class TorrentInfo:
 
     # 查询得到的
     tmdb_title: Optional[str] = ''          # 搜索得到的 媒体标题
-    tmdb_cat: Optional[str] = ''          # 类型 (movie, tv)
+    tmdb_cat: Optional[str] = ''            # 类型 (movie, tv)
     tmdb_id: Optional[str] = ''             # TMDb id
     imdb_id: Optional[str] = ''             # IMDb id
     imdb_val: Optional[float] = 0.0         # IMDb rate val  
@@ -86,6 +86,7 @@ class TorrentParser:
         t = TorrentInfo()
         t.torname = torname
         t.clean_title = tt.title
+        t.tmdb_cat = tt.type
         t.cntitle = tt.cntitle
         t.season = tt.season
         t.episode = tt.episode
