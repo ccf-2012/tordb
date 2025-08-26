@@ -110,6 +110,16 @@ def create_media_from_tmdb(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create media from TMDb: {e}")
 
+@app.get("/api/media/search", response_model=schemas.MediaPage)
+def search_media_endpoint(q: str, db: Session = Depends(get_db)):
+    """
+    Searches for media items by a query string, matching against tmdb_title and clean_title.
+    """
+    if not q or not q.strip():
+        # Return all media if query is empty, similar to the main GET endpoint
+        return crud.get_all_media(db, skip=0, limit=10) # Adjust limit as needed
+    return crud.search_media(db, q=q)
+
 @app.get("/api/media/", response_model=schemas.MediaPage)
 def read_all_media(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     return crud.get_all_media(db, skip=skip, limit=limit)

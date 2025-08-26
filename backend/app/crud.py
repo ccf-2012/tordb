@@ -12,7 +12,7 @@ def get_media(db: Session, media_id: int):
     return db.query(models.Media).filter(models.Media.id == media_id).first()
 
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from . import models, schemas
 
 def get_all_media(db: Session, skip: int = 0, limit: int = 100):
@@ -30,6 +30,25 @@ def get_all_media(db: Session, skip: int = 0, limit: int = 100):
     media_items = db.query(models.Media).filter(models.Media.tmdb_id.in_(paginated_tmdb_ids)).all()
     
     return {"items": media_items, "total": total_groups}
+
+def search_media(db: Session, q: str):
+    search_query = f"%{q}%"
+    
+    # Query for media items matching the search query in either tmdb_title or clean_title
+    media_items = db.query(models.Media).filter(
+        or_(
+            models.Media.tmdb_title.ilike(search_query),
+            models.Media.clean_title.ilike(search_query)
+        )
+    ).all()
+    
+    # Since the search result is not paginated in the same way, we can count the total results directly.
+    # For consistency, we can still group by tmdb_id if needed, but for now, we'll return the flat list.
+    # The frontend will need to handle this structure.
+    
+    total_results = len(media_items)
+    
+    return {"items": media_items, "total": total_results}
 
 def find_torrent_by_name(db: Session, name: str) -> models.Torrent | None:
     return db.query(models.Torrent).filter(models.Torrent.name == name).first()

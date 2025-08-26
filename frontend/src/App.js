@@ -114,7 +114,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [localFilter, setLocalFilter] = useState('');
+  const [dbSearchQuery, setDbSearchQuery] = useState('');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,24 +128,6 @@ function App() {
 
   const groupedMedia = useMemo(() => groupMediaByTmdbId(mediaList), [mediaList]);
   const totalPages = Math.ceil(totalGroups / GROUPS_PER_PAGE);
-
-  const filteredData = useMemo(() => {
-    if (!localFilter) {
-        return groupedMedia;
-    }
-    return groupedMedia.filter(media => {
-        const title = media.tmdb_title || '';
-        const overview = media.tmdb_overview || '';
-        const genres = media.tmdb_genres || '';
-        const regexList = media.torname_regex_list.join(' ');
-        const torrentNames = media.torrents.map(t => t.name).join(' ');
-        const cleanTitle = media.clean_title || '';
-
-        const searchableText = `${title} ${overview} ${genres} ${regexList} ${torrentNames} ${cleanTitle}`.toLowerCase();
-        return searchableText.includes(localFilter.toLowerCase());
-    });
-  }, [groupedMedia, localFilter]);
-
 
   const fetchMedia = (page) => {
     setLoading(true);
@@ -164,10 +146,13 @@ function App() {
   };
 
   useEffect(() => {
-    fetchMedia(currentPage);
-  }, [currentPage]);
+    // Only fetch media if there is no active database search
+    if (!dbSearchQuery) {
+      fetchMedia(currentPage);
+    }
+  }, [currentPage, dbSearchQuery]);
 
-  const handleSearch = () => {
+  const handleTmdbAdd = () => {
     if (!searchQuery.trim()) {
       fetchMedia(1); // Reload the first page if search is cleared
       return;
@@ -181,6 +166,29 @@ function App() {
         } else {
             fetchMedia(1);
         }
+      })
+      .catch(err => {
+        setError(`Search failed: ${err.response?.data?.detail || err.message}`);
+        setLoading(false);
+      });
+  };
+
+  const handleDbSearch = () => {
+    setLoading(true);
+    setError(null);
+    if (!dbSearchQuery.trim()) {
+      // When search is cleared, fetch the first page of all media
+      setCurrentPage(1);
+      fetchMedia(1);
+      return;
+    }
+    axios.get(`/api/media/search?q=${dbSearchQuery}`)
+      .then(response => {
+        setMediaList(response.data.items);
+        setTotalGroups(response.data.total);
+        // Reset to page 1 for search results
+        setCurrentPage(1); 
+        setLoading(false);
       })
       .catch(err => {
         setError(`Search failed: ${err.response?.data?.detail || err.message}`);
@@ -348,20 +356,24 @@ function App() {
               placeholder="Add media by torrent name..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && handleSearch()}
+              onKeyPress={e => e.key === 'Enter' && handleTmdbAdd()}
             />
-            <Button variant="primary" onClick={handleSearch}>Add from TMDb</Button>
+            <Button variant="primary" onClick={handleTmdbAdd}>Add from TMDb</Button>
           </InputGroup>
         </Col>
         <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
           <InputGroup>
             <FormControl
-              placeholder="Filter loaded items..."
-              value={localFilter}
-              onChange={e => setLocalFilter(e.target.value)}
+              placeholder="Search all media..."
+              value={dbSearchQuery}
+              onChange={e => setDbSearchQuery(e.target.value)}
+              onKeyPress={e => e.key === 'Enter' && handleDbSearch()}
             />
-            <Button variant="success" onClick={() => handleOpenModal()}>+ Add Manually</Button>
+            <Button variant="info" onClick={handleDbSearch}>Search</Button>
           </InputGroup>
+        </Col>
+        <Col lg={3} md={12} xs={12} className="text-lg-end">
+            <Button variant="success" onClick={() => handleOpenModal()}>+ Add Manually</Button>
         </Col>
       </Row>
 
@@ -369,7 +381,7 @@ function App() {
         <div>Loading...</div>
       ) : (
         <>
-          <Table columns={columns} data={filteredData} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
+          <Table columns={columns} data={groupedMedia} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
           {totalPages > 0 && (
             <Row className="justify-content-center align-items-center mt-3">
               <Col xs="auto" className="text-muted small me-3">
