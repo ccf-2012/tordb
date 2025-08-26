@@ -73,7 +73,7 @@ class MediaUpdate(MediaBase):
     custom_path: Optional[str] = None
 
 class Media(MediaBase):
-    id: int
+    id: Optional[int] = None
     torrents: List[Torrent] = []
 
     class Config:
