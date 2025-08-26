@@ -195,11 +195,11 @@ class TMDbSearcher:
                 
                 # Update confidence
                 if match_type == 'strict':
-                    torinfo.confidence += 20
-                elif match_type == 'fuzzy':
                     torinfo.confidence += 10
-                if category != 'multi':
+                elif match_type == 'fuzzy':
                     torinfo.confidence += 5
+                if category != 'multi':
+                    torinfo.confidence += 2
                 
                 self._fill_tmdb_details(torinfo)
                 return True
@@ -224,7 +224,7 @@ class TMDbSearcher:
         # Builds the list of searches to perform
         searches = []
         if torinfo.season:
-            torinfo.confidence += 10
+            torinfo.confidence += 5
             searches = [('tv', cntitle), ('tv', cuttitle), ('multi', extitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
             torinfo.confidence += 5
