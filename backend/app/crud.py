@@ -242,9 +242,9 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
 
         # If confidence is too low, reject
         logger.debug(f"confidence: {torinfo.confidence}")
-        if torinfo.confidence < 20:
+        if torinfo.confidence < 19:
             logger.warning(f"BLIND confidence too low: {torinfo.confidence} for {torinfo.torname}")
-            return None
+            return new_media
 
         # Create new media and torrent
         logger.info(f"TMDb: Found media by blind search: {torinfo.tmdb_title}")

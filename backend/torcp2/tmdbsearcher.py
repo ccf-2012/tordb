@@ -177,8 +177,11 @@ class TMDbSearcher:
         # Title cleaning
         cuttitle = self._clean_title(title)
         torinfo.confidence += len(cuttitle)
-        if cntitle:
-            torinfo.confidence += 10
+        if cntitle and (cntitle != title) :
+            torinfo.confidence += 5
+        if extitle and (extitle != title) :
+            torinfo.confidence += 5
+        logger.debug(f"init confidence: {torinfo.confidence}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
         for category, term in search_list:
@@ -195,11 +198,12 @@ class TMDbSearcher:
                 
                 # Update confidence
                 if match_type == 'strict':
-                    torinfo.confidence += 10
-                elif match_type == 'fuzzy':
                     torinfo.confidence += 5
-                if category != 'multi':
+                elif match_type == 'fuzzy':
                     torinfo.confidence += 2
+                if category != 'multi':
+                    torinfo.confidence += 1
+                logger.debug(f"confidence after _perform_search: {torinfo.confidence}")
                 
                 self._fill_tmdb_details(torinfo)
                 return True
@@ -230,7 +234,6 @@ class TMDbSearcher:
             torinfo.confidence += 5
             searches = [('tv', cntitle), ('multi', cuttitle), ('multi', extitle)]
         elif torinfo.tmdb_cat == 'movie':
-            torinfo.confidence += 5
             searches = [('movie', cntitle),  ('movie', cuttitle), ('movie', extitle), ('multi', cuttitle), ('multi', cntitle)]
         else:
             searches = [('multi', cntitle), ('multi', cuttitle), ('multi', extitle), ('tv', cuttitle), ('movie', cuttitle)]
