@@ -115,9 +115,10 @@ def create_media(db: Session, media: schemas.MediaCreate) -> models.Media:
     return db_media
 
 
-def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media:
+def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.MediaCreate:
+    """Helper function to create a MediaCreate schema from a TorrentInfo object."""
     tmdb_genres = format_genres(torinfo)
-    media_create = schemas.MediaCreate(
+    return schemas.MediaCreate(
         clean_title=torinfo.clean_title,
         cntitle=torinfo.cntitle,
         tmdb_id=torinfo.tmdb_id,
@@ -132,8 +133,12 @@ def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media
         origin_country=torinfo.origin_country,
         original_title=torinfo.original_title,
         production_countries=torinfo.production_countries,
-        tmdb_genres=tmdb_genres
+        tmdb_genres=tmdb_genres,
     )
+
+def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media:
+    """Creates a media item from a TorrentInfo object and saves it to the database."""
+    media_create = _create_media_schema_from_torinfo(torinfo)
     return create_media(db, media_create)
 
 def create_torrent(db: Session, torinfo: TorrentInfo, media_id: int) -> models.Torrent:
@@ -240,10 +245,13 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             create_torrent(db, torinfo, media.id)
             return media
 
-        # If confidence is too low, reject
+        # If confidence is too low, do not save to DB, but return the result for caller.
         logger.debug(f"confidence: {torinfo.confidence}")
         if torinfo.confidence < 19:
             logger.warning(f"BLIND confidence too low: {torinfo.confidence} for {torinfo.torname}")
+            # Create a temporary Media object without saving it to the database
+            media_create = _create_media_schema_from_torinfo(torinfo)
+            new_media = models.Media(**media_create.model_dump())
             return new_media
 
         # Create new media and torrent
