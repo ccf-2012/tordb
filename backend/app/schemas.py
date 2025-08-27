@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import datetime
 
 # --- Query Schema for the main search endpoint ---
 
@@ -54,6 +55,7 @@ class MediaCreate(MediaBase):
     pass
 
 class MediaUpdate(MediaBase):
+    created_at: Optional[datetime] = None
     torname_regex: Optional[str] = None
     clean_title: Optional[str] = None
     cntitle: Optional[str] = None
@@ -75,6 +77,7 @@ class MediaUpdate(MediaBase):
 
 class Media(MediaBase):
     id: Optional[int] = None
+    created_at: Optional[datetime] = None
     id_score: Optional[int] = None
     torrents: List[Torrent] = []
 

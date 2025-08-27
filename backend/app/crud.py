@@ -20,7 +20,7 @@ def get_all_media(db: Session, skip: int = 0, limit: int = 100):
     total_groups = db.query(func.count(models.Media.tmdb_id.distinct())).scalar()
 
     # 2. Get the paginated list of distinct tmdb_id's
-    paginated_tmdb_ids_query = db.query(models.Media.tmdb_id).distinct().order_by(models.Media.id.desc()).offset(skip).limit(limit)
+    paginated_tmdb_ids_query = db.query(models.Media.tmdb_id).distinct().order_by(models.Media.created_at.desc()).offset(skip).limit(limit)
     paginated_tmdb_ids = [id[0] for id in paginated_tmdb_ids_query.all()]
 
     if not paginated_tmdb_ids:
@@ -256,7 +256,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
 
         # If score is too low, do not save to DB, but return the result for caller.
         logger.debug(f"score: {torinfo.id_score}")
-        if torinfo.id_score < 15:
+        if torinfo.id_score < 19:
             logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
             # Create a temporary Media object without saving it to the database
             media_create = _create_media_schema_from_torinfo(torinfo)

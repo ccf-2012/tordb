@@ -3,7 +3,7 @@ import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Button, Container, Row, Col, InputGroup, FormControl, Alert, Pagination } from 'react-bootstrap';
 // Import useSortBy
-import { useTable, useSortBy, useExpanded } from 'react-table';
+import { useTable, useExpanded } from 'react-table';
 import MediaModal from './components/MediaModal';
 import { useMediaQuery } from 'react-responsive';
 
@@ -46,10 +46,7 @@ function Table({ columns, data, onEdit, onDelete }) {
     {
       columns,
       data,
-      // Set initial sort state
-      initialState: { sortBy: [{ id: 'id', desc: true }] },
     },
-    useSortBy, // Use sorting
     useExpanded
   );
 
@@ -61,16 +58,8 @@ function Table({ columns, data, onEdit, onDelete }) {
             <tr {...headerGroup.getHeaderGroupProps()}>
               {headerGroup.headers.map(column => (
                 // Add sorting props to the header
-                <th {...column.getHeaderProps(column.getSortByToggleProps())} style={{ minWidth: column.minWidth, width: column.width, maxWidth: column.maxWidth, cursor: 'pointer' }}>
+                <th {...column.getHeaderProps()} style={{ minWidth: column.minWidth, width: column.width, maxWidth: column.maxWidth, cursor: 'pointer' }}>
                   {column.render('Header')}
-                  {/* Add a sort direction indicator */}
-                  <span>
-                    {column.isSorted
-                      ? column.isSortedDesc
-                        ? ' 🔽'
-                        : ' 🔼'
-                      : ''}
-                  </span>
                 </th>
               ))}
             </tr>
@@ -113,7 +102,6 @@ function App() {
   const [mediaList, setMediaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [dbSearchQuery, setDbSearchQuery] = useState('');
 
   // Pagination State
@@ -151,27 +139,6 @@ function App() {
       fetchMedia(currentPage);
     }
   }, [currentPage, dbSearchQuery]);
-
-  const handleTmdbAdd = () => {
-    if (!searchQuery.trim()) {
-      fetchMedia(1); // Reload the first page if search is cleared
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    axios.post(`/api/query`, { torname: searchQuery })
-      .then(response => {
-        if (currentPage !== 1) {
-            setCurrentPage(1);
-        } else {
-            fetchMedia(1);
-        }
-      })
-      .catch(err => {
-        setError(`Search failed: ${err.response?.data?.detail || err.message}`);
-        setLoading(false);
-      });
-  };
 
   const handleDbSearch = () => {
     setLoading(true);
@@ -260,15 +227,12 @@ function App() {
               }
             </div>
           ),
-          disableSortBy: true, // Disable sorting on poster
           width: 92,
           minWidth: 92,
         },
         {
           Header: '媒体详情',
           accessor: 'tmdb_title',
-          // Add a second accessor for sorting by year
-          sortAccessor: 'tmdb_year',
           Cell: ({ row }) => (
             <div>
               <h6 className="mb-1">{row.original.tmdb_title} <span className="text-muted font-weight-normal">({row.original.tmdb_year})</span></h6>
@@ -305,10 +269,6 @@ function App() {
           {
             Header: '规则',
             accessor: 'torname_regex_list',
-            // Custom sort for number of rules
-            sortType: (rowA, rowB) => {
-                return rowA.original.torname_regex_list.length > rowB.original.torname_regex_list.length ? 1 : -1;
-            },
             Cell: ({ value }) => (
               <ul className="list-unstyled mb-0 small">
                 {value.map((regex, index) => (
@@ -322,14 +282,12 @@ function App() {
             Header: '种子',
             accessor: 'torrents',
             Cell: ({ value }) => value.length,
-            sortType: 'basic',
             width: 30,
 
           },
           {
             Header: '操作',
             id: 'actions',
-            disableSortBy: true, // Disable sorting on actions
             Cell: ({ row }) => (
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
                   <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
@@ -347,21 +305,14 @@ function App() {
   );
 
   return (
-    <Container fluid className="mt-4" style={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
-      <h3 className="mb-4">TorDB</h3>
+    <>
+    <div style={{ padding: '1rem', borderBottom: '1px solid #dee2e6', marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
+        <img src="/logo192.png" width="40" height="40" alt="logo" style={{ marginRight: '10px' }} />
+        <h5 style={{ margin: 0 }}><a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>TORDB: Taming the torrents</a></h5>
+    </div>
+    <Container fluid style={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
       {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
       <Row className="mb-3">
-        <Col lg={5} md={6} xs={12} className="mb-2 mb-md-0">
-          <InputGroup>
-            <FormControl
-              placeholder="Add media by torrent name..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && handleTmdbAdd()}
-            />
-            <Button variant="primary" onClick={handleTmdbAdd}>Add from TMDb</Button>
-          </InputGroup>
-        </Col>
         <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
           <InputGroup>
             <FormControl
@@ -424,6 +375,7 @@ function App() {
         />
       )}
     </Container>
+    </>
   );
 }
 
