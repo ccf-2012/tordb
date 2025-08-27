@@ -14,6 +14,31 @@ def contains_cjk(text):
     if not text: return False
     return re.search(r'[\u4e00-\u9fa5]', text)
 
+def longest_common_subsequence_length(str1, str2):
+    """
+    计算两个字符串的最长公共子序列长度（动态规划实现）
+    
+    Args:
+        str1 (str): 第一个字符串
+        str2 (str): 第二个字符串
+    
+    Returns:
+        int: 最长公共子序列的长度
+    """
+    m, n = len(str1), len(str2)
+    
+    # 创建二维dp数组，dp[i][j]表示str1前i个字符和str2前j个字符的LCS长度
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+    
+    # 填充dp数组
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            if str1[i-1] == str2[j-1]:
+                dp[i][j] = dp[i-1][j-1] + 1
+            else:
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+    
+    return dp[m][n]
 
 def find_longest_consecutive_match(str1, str2):
     """
@@ -244,8 +269,8 @@ class TMDbSearcher:
                     if cntitle == torinfo.tmdb_title:
                         torinfo.id_score += 20
                     else:
-                        # 找到的tmdb_title，与 cntitle 连续相同字串，接近len(tmdb_title)
-                        length, pos1, pos2 = find_longest_consecutive_match(cntitle, torinfo.tmdb_title)
+                        # 找到的tmdb_title，与 cntitle 最长公共子序列长度，接近len(tmdb_title)
+                        length = longest_common_subsequence_length(cntitle, torinfo.tmdb_title)
                         if abs(len(torinfo.tmdb_title) - length) < 3:
                             torinfo.id_score += 10
                 self._fill_tmdb_details(torinfo)
