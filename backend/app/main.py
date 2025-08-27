@@ -59,6 +59,8 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
     media_result = crud.search_and_create_media(db, torinfo, searcher)
 
     if media_result:
+        # Always attach the id_score from the search context to the result
+        media_result.id_score = torinfo.id_score
         return media_result
     
     raise HTTPException(status_code=404, detail=f"Could not find or create a media match for \"{query.torname}\"")
