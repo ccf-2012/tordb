@@ -14,6 +14,39 @@ def contains_cjk(text):
     if not text: return False
     return re.search(r'[\u4e00-\u9fa5]', text)
 
+
+def find_longest_consecutive_match(str1, str2):
+    """
+    找到两个字符串中最长的连续相同子串长度
+    
+    Args:
+        str1 (str): 第一个字符串
+        str2 (str): 第二个字符串
+    
+    Returns:
+        tuple: (最长匹配长度, 在str1中的起始位置, 在str2中的起始位置)
+    """
+    max_length = 0
+    best_pos1 = -1
+    best_pos2 = -1
+    
+    for i in range(len(str1)):
+        for j in range(len(str2)):
+            length = 0
+            # 从位置i和j开始比较连续字符
+            while (i + length < len(str1) and 
+                   j + length < len(str2) and 
+                   str1[i + length] == str2[j + length]):
+                length += 1
+            
+            if length > max_length:
+                max_length = length
+                best_pos1 = i
+                best_pos2 = j
+    
+    return max_length, best_pos1, best_pos2
+
+
 class TMDbSearcher:
     def __init__(self, tmdb_api_key, tmdb_lang='zh-CN'):
         if tmdb_api_key:
@@ -202,13 +235,19 @@ class TMDbSearcher:
                 else:
                     self._save_tmdb_result(torinfo, result, media_type=category)
 
-                # Update id_score
-                if intyear > 1900 and match_type == 'strict':
-                    torinfo.id_score += 5
-
+                # if intyear > 1900 and match_type == 'strict':
+                #     torinfo.id_score += 5
                 if category != 'multi':
                     torinfo.id_score += 5
-                
+
+                if cntitle:
+                    if cntitle == torinfo.tmdb_title:
+                        torinfo.id_score += 20
+                    else:
+                        # 找到的tmdb_title，与 cntitle 连续相同字串，接近len(tmdb_title)
+                        length, pos1, pos2 = find_longest_consecutive_match(cntitle, torinfo.tmdb_title)
+                        if abs(len(torinfo.tmdb_title) - length) < 3:
+                            torinfo.id_score += 10
                 self._fill_tmdb_details(torinfo)
                 return True
 
