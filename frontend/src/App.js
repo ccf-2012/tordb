@@ -79,7 +79,7 @@ function Table({ columns, data, onEdit, onDelete }) {
                   <tr>
                     <td colSpan={visibleColumns.length} className="p-0">
                       <div className="p-3 bg-light">
-                        <h7>Torrents for {row.original.tmdb_title} <span className="text-muted small">(Score: {row.original.id_score})</span></h7>
+                        <h7>种子列表 {row.original.tmdb_title} <span className="text-muted small">(分数: {row.original.id_score})</span></h7>
                         <ul className="list-group">
                           {row.original.torrents.map(t => 
                             <li key={t.id} className="list-group-item">{t.name}</li>
@@ -128,7 +128,7 @@ function App() {
       })
       .catch(error => {
         console.error('Error fetching media:', error);
-        setError('Failed to fetch media data. Is the backend running?');
+        setError('获取媒体数据失败。后端服务是否在运行？');
         setLoading(false);
       });
   };
@@ -158,7 +158,7 @@ function App() {
         setLoading(false);
       })
       .catch(err => {
-        setError(`Search failed: ${err.response?.data?.detail || err.message}`);
+        setError(`搜索失败: ${err.response?.data?.detail || err.message}`);
         setLoading(false);
       });
   };
@@ -193,16 +193,16 @@ function App() {
         fetchMedia(currentPage);
       })
       .catch(err => {
-        setError(`Failed to save media: ${err.response?.data?.detail || err.message}`);
+        setError(`保存媒体失败: ${err.response?.data?.detail || err.message}`);
       });
   };
 
   const handleDeleteMedia = (mediaId) => {
-    if (window.confirm('Are you sure you want to delete this media item?')) {
+    if (window.confirm('确定要删除这个媒体条目吗？')) {
       axios.delete(`/api/media/${mediaId}`)
         .then(() => fetchMedia(currentPage))
         .catch(err => {
-          setError(`Failed to delete media: ${err.response?.data?.detail || err.message}`);
+          setError(`删除媒体失败: ${err.response?.data?.detail || err.message}`);
         });
     }
   };
@@ -222,7 +222,7 @@ function App() {
                   style={{ height: '120px', width: '80px', objectFit: 'cover', borderRadius: '5px' }} 
                 /> : 
                 <div style={{ height: '120px', width: '80px', backgroundColor: '#e9ecef', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="text-muted small">No Poster</span>
+                  <span className="text-muted small">无海报</span>
                 </div>
               }
             </div>
@@ -250,14 +250,13 @@ function App() {
           width: '100%',
         },
         {
-          Header: 'Clean Title',
+          Header: '匹配标题',
           accessor: 'clean_title',
           Cell: ({ row }) => (
             <div>
               <div>{row.original.clean_title}</div>
               <div className="text-muted small">{row.original.tmdb_year}</div>
               {row.original.cntitle && <div className="text-muted small">{row.original.cntitle}</div>}
-              {row.original.id_score && <div className="text-muted small">Score: {row.original.id_score}</div>}
             </div>
           ),
           width: 60,
@@ -290,8 +289,8 @@ function App() {
             id: 'actions',
             Cell: ({ row }) => (
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="Edit"><span role="img" aria-label="edit">&#9998;</span></Button>
-                  <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="Delete"><span role="img" aria-label="delete">&#128465;</span></Button>
+                  <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
+                  <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
               </div>
             ),
             width: 30,
@@ -316,28 +315,28 @@ function App() {
         <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
           <InputGroup>
             <FormControl
-              placeholder="Search all media..."
+              placeholder="搜索..."
               value={dbSearchQuery}
               onChange={e => setDbSearchQuery(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && handleDbSearch()}
             />
-            <Button variant="info" onClick={handleDbSearch}>Search</Button>
+            <Button variant="info" onClick={handleDbSearch}>搜索</Button>
           </InputGroup>
         </Col>
         <Col lg={3} md={12} xs={12} className="text-lg-end">
-            <Button variant="success" onClick={() => handleOpenModal()}>+ Add Manually</Button>
+            <Button variant="success" onClick={() => handleOpenModal()}>+ 手动添加</Button>
         </Col>
       </Row>
 
       {loading ? (
-        <div>Loading...</div>
+        <div>加载中...</div>
       ) : (
         <>
           <Table columns={columns} data={groupedMedia} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
           {totalPages > 0 && (
             <Row className="justify-content-center align-items-center mt-3">
-              <Col xs="auto" className="text-muted small me-3">
-                Page {currentPage} of {totalPages} (Total: {totalGroups} )
+              <Col xs="auto" className="text-muted small me-3 d-none d-md-block">
+                第 {currentPage} 页 / 共 {totalPages} 页 (总计: {totalGroups})
               </Col>
               <Col xs="auto">
                 <Pagination size={isMobile ? 'sm' : undefined}>

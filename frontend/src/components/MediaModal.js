@@ -7,7 +7,7 @@ function TMDbInfoBlock({ details }) {
   if (!details || !details.tmdb_title) {
     return (
         <div className="p-3 mb-3 bg-light rounded text-center text-muted">
-            TMDb details will appear here once fetched.
+            获取TMDb信息后将在此显示。
         </div>
     );
   }
@@ -21,14 +21,14 @@ function TMDbInfoBlock({ details }) {
           {posterUrl ? (
             <img src={posterUrl} alt="poster" className="img-fluid rounded" />
           ) : (
-            <div className="text-center text-muted pt-4">No Poster</div>
+            <div className="text-center text-muted pt-4">无海报</div>
           )}
         </Col>
         <Col md={9}>
           <h4>{details.tmdb_title} <span className="text-muted">({details.tmdb_year})</span></h4>
-          <p className="mb-1"><strong>Genres:</strong> {details.tmdb_genres || 'N/A'}</p>
+          <p className="mb-1"><strong>类型:</strong> {details.tmdb_genres || '无'}</p>
           <p className="small mt-2" style={{maxHeight: '120px', overflowY: 'auto'}}>
-            {details.tmdb_overview || 'No overview available.'}
+            {details.tmdb_overview || '无可用概述。'}
           </p>
         </Col>
       </Row>
@@ -67,7 +67,7 @@ function MediaModal({ media, onSave, onClose }) {
 
   const handleFetchTMDbDetails = () => {
     if (!formData.tmdb_id || !formData.tmdb_cat) {
-      setFetchError('Please provide a TMDb ID and select a category.');
+      setFetchError('请输入 TMDb ID 并选择类别。');
       return;
     }
     setFetchError(null);
@@ -85,61 +85,61 @@ function MediaModal({ media, onSave, onClose }) {
       })
       .catch(error => {
         console.error('Error fetching TMDb details:', error);
-        setFetchError(error.response?.data?.detail || 'Failed to fetch details.');
+        setFetchError(error.response?.data?.detail || '获取详情失败。');
       });
   };
 
   return (
     <Modal show onHide={onClose} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>{media ? 'Edit Media' : 'Add New Media'}</Modal.Title>
+        <Modal.Title>{media ? '编辑媒体' : '添加新媒体'}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <Form>
           {/* Always show the regex field at the top */}
           <Form.Group className="mb-3">
-            <Form.Label>Torrent Name Regex</Form.Label>
+            <Form.Label>种子名称匹配规则</Form.Label>
             <Form.Control 
               type="text" 
               name="torname_regex" 
               value={formData.torname_regex || ''} 
               onChange={handleChange} 
-              placeholder='e.g., "My Movie Title 2023"'
+              placeholder='例如: "My Movie Title 2023"'
             />
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>Clean Title</Form.Label>
+            <Form.Label>标题</Form.Label>
             <Form.Control 
               type="text" 
               name="clean_title" 
               value={formData.clean_title || ''} 
               onChange={handleChange} 
-              placeholder='e.g., "My Movie Title"'
+              placeholder='例如: "My Movie Title"'
             />
           </Form.Group>
 
           {/* TMDb Details Section */}
-          <h5 className="mt-4">TMDb Matching</h5>
+          <h5 className="mt-4">TMDb 匹配</h5>
           <hr />
           <Row className="align-items-end">
             <Col md={5}>
               <Form.Group>
                 <Form.Label>TMDb ID</Form.Label>
-                <Form.Control type="number" name="tmdb_id" value={formData.tmdb_id || ''} onChange={handleChange} placeholder="e.g., 603" />
+                <Form.Control type="number" name="tmdb_id" value={formData.tmdb_id || ''} onChange={handleChange} placeholder="例如: 603" />
               </Form.Group>
             </Col>
             <Col md={4}>
               <Form.Group>
-                <Form.Label>Category</Form.Label>
+                <Form.Label>类别</Form.Label>
                 <Form.Select name="tmdb_cat" value={formData.tmdb_cat || ''} onChange={handleChange}>
-                  <option value="movie">Movie</option>
-                  <option value="tv">TV</option>
+                  <option value="movie">电影</option>
+                  <option value="tv">电视剧</option>
                 </Form.Select>
               </Form.Group>
             </Col>
             <Col md={3}>
-              <Button variant="info" onClick={handleFetchTMDbDetails} className="w-100">Fetch Details</Button>
+              <Button variant="info" onClick={handleFetchTMDbDetails} className="w-100">获取</Button>
             </Col>
           </Row>
           {fetchError && <Alert variant="danger" className="mt-3">{fetchError}</Alert>}
@@ -151,8 +151,8 @@ function MediaModal({ media, onSave, onClose }) {
         </Form>
       </Modal.Body>
       <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" onClick={handleSave}>Save Changes</Button>
+        <Button variant="secondary" onClick={onClose}>取消</Button>
+        <Button variant="primary" onClick={handleSave}>保存</Button>
       </Modal.Footer>
     </Modal>
   );
