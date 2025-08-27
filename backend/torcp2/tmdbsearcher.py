@@ -10,6 +10,10 @@ def tryint(instr):
     except (ValueError, TypeError):
         return 0
 
+def contains_cjk(text):
+    if not text: return False
+    return re.search(r'[\u4e00-\u9fa5]', text)
+
 class TMDbSearcher:
     def __init__(self, tmdb_api_key, tmdb_lang='zh-CN'):
         if tmdb_api_key:
@@ -175,12 +179,13 @@ class TMDbSearcher:
         cuttitle = self._clean_title(title)
         if len(cuttitle) > 4:
             torinfo.id_score += 8
-        if cntitle and (cntitle != title) :
+
+        if cntitle:
             torinfo.id_score += 8
-        if extitle and (extitle != title) :
+        if extitle and (extitle != cntitle) :
             torinfo.id_score += 8
         if intyear > 1900:
-            torinfo.id_score += 8
+            torinfo.id_score += 10
 
         logger.debug(f"Search ==>  title: {title}, cntitle: {cntitle}, extitle: {extitle}, year:{intyear}  init id_score: {torinfo.id_score}")
 
@@ -262,10 +267,6 @@ class TMDbSearcher:
     def _get_title(self, result):
         return getattr(result, 'name', getattr(result, 'title', getattr(result, 'original_name', getattr(result, 'original_title', ''))))
 
-    def contains_cjk(self, text):
-        if not text: return False
-        return re.search(r'[\u4e00-\u9fa5]', text)
-
     def _replace_roman_num(self, titlestr):
         roman_map = {'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'XI': '11', 'XII': '12', 'XIII': '13', 'XIV': '14', 'XV': '15', 'XVI': '16'}
         for roman, arabic in roman_map.items():
@@ -298,7 +299,7 @@ class TMDbSearcher:
         # Prefer item with CJK title if language is Chinese
         if self.tmdb and self.tmdb.language == 'zh-CN':
             for item in matchList[:3]:
-                if self.contains_cjk(self._get_title(item)):
+                if contains_cjk(self._get_title(item)):
                     return item
         
         return matchList[0]
