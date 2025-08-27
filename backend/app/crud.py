@@ -68,7 +68,7 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | N
             score -= 6
 
         # 匹配字串长度加分
-        if len(torinfo.clean_title) > 5:
+        if len(torinfo.clean_title) >= 4:
             score += 2
 
         # 年份相差1年内，对 movie 和 S01的剧有效
@@ -82,7 +82,7 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | N
         if torinfo.extitle and torinfo.extitle in (media.cntitle, media.tmdb_title):
             score += 4
         
-        # TODO: 字符长度5+, year, cntitle, extitle 至少匹配一个
+        # TODO: 字符长度4+, year, cntitle, extitle 至少匹配一个
         if score >= 2:
             logger.info(f"Found media by torinfo: {media.tmdb_title} with score {score}")
             return media
@@ -95,7 +95,7 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | N
 def find_media_by_torname_regex(db: Session, title: str, clean_title: str) -> models.Media | None:
     all_media_with_regex = db.query(models.Media).filter(
         models.Media.torname_regex != None,
-        # models.Media.clean_title.like(f"%{clean_title}%") # 加上表示只能查到 clean_title 比库里的短的
+        # models.Media.clean_title.like(f"%{clean_title}%") # 加上后只能查到 clean_title 比库里的短的
     ).all()
     for media in all_media_with_regex:
         try:
