@@ -165,7 +165,7 @@ class TMDbSearcher:
         return ''
 
     def _search_tmdb(self, torinfo):
-        torinfo.confidence = 0
+        torinfo.id_score = 0
         title = torinfo.clean_title
         cntitle = torinfo.cntitle
         extitle = torinfo.extitle
@@ -173,12 +173,13 @@ class TMDbSearcher:
 
         # Title cleaning
         cuttitle = self._clean_title(title)
-        torinfo.confidence += len(cuttitle)
+        if len(cuttitle) > 5:
+            torinfo.id_score += 5
         if cntitle and (cntitle != title) :
-            torinfo.confidence += 5
+            torinfo.id_score += 5
         if extitle and (extitle != title) :
-            torinfo.confidence += 5
-        logger.debug(f"title: {title}, cntitle: {cntitle}, extitle: {extitle}, init confidence: {torinfo.confidence}")
+            torinfo.id_score += 5
+        logger.debug(f"title: {title}, cntitle: {cntitle}, extitle: {extitle}, init id_score: {torinfo.id_score}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
         logger.debug(f"search list: {search_list}")
@@ -193,14 +194,14 @@ class TMDbSearcher:
                 else:
                     self._save_tmdb_result(torinfo, result, media_type=category)
                 
-                # Update confidence
+                # Update id_score
                 if match_type == 'strict':
-                    torinfo.confidence += 5
+                    torinfo.id_score += 5
                 elif match_type == 'fuzzy':
-                    torinfo.confidence += 2
+                    torinfo.id_score += 3
+
                 if category != 'multi':
-                    torinfo.confidence += 5
-                logger.debug(f"confidence after _perform_search: {torinfo.confidence}")
+                    torinfo.id_score += 5
                 
                 self._fill_tmdb_details(torinfo)
                 return True
@@ -225,10 +226,10 @@ class TMDbSearcher:
         # Builds the list of searches to perform
         searches = []
         if torinfo.season:
-            torinfo.confidence += 5
+            torinfo.id_score += 5
             searches = [('tv', cntitle), ('tv', cuttitle), ('multi', extitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
-            torinfo.confidence += 5
+            torinfo.id_score += 5
             searches = [('tv', cntitle), ('multi', cuttitle), ('multi', extitle)]
         elif torinfo.tmdb_cat == 'movie':
             searches = [('movie', cntitle),  ('movie', cuttitle), ('movie', extitle), ('multi', cuttitle), ('multi', cntitle)]

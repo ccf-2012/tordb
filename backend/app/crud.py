@@ -87,7 +87,7 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | N
             logger.info(f"Found media by torinfo: {media.tmdb_title} with score {score}")
             return media
 
-    # If no high-confidence match is found, return the first candidate as a fallback
+    # If no high-score match is found, return the first candidate as a fallback
     # This preserves the old behavior if no other signals are present.
     logger.info(f"Fallback: Found media by clean_title: {candidates[0].tmdb_title}")
     return candidates[0]
@@ -253,10 +253,10 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             create_torrent(db, torinfo, media.id)
             return media
 
-        # If confidence is too low, do not save to DB, but return the result for caller.
-        logger.debug(f"confidence: {torinfo.confidence}")
-        if torinfo.confidence < 15:
-            logger.warning(f"BLIND confidence too low: {torinfo.confidence} for {torinfo.torname}")
+        # If score is too low, do not save to DB, but return the result for caller.
+        logger.debug(f"score: {torinfo.id_score}")
+        if torinfo.id_score < 15:
+            logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
             # Create a temporary Media object without saving it to the database
             media_create = _create_media_schema_from_torinfo(torinfo)
             new_media = models.Media(**media_create.model_dump())

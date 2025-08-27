@@ -42,7 +42,7 @@ class TorrentInfo:
     overview = ''
     vote_average = 0
     production_countries = ''
-    confidence = 0
+    id_score = 0
 
     def __str__(self) -> str:
         """美化输出格式"""
