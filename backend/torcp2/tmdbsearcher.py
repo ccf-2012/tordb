@@ -126,15 +126,12 @@ class TMDbSearcher:
 
         if not results:
             # TODO: search without year?
-            
             return None, None
 
-        # Strict year match
         result = self._find_year_match(results, year, strict=True)
         if result:
             return result, 'strict'
 
-        # Fuzzy year match
         result = self._find_year_match(results, year, strict=False)
         if result:
             return result, 'fuzzy'
@@ -202,7 +199,7 @@ class TMDbSearcher:
                 elif match_type == 'fuzzy':
                     torinfo.confidence += 2
                 if category != 'multi':
-                    torinfo.confidence += 1
+                    torinfo.confidence += 5
                 logger.debug(f"confidence after _perform_search: {torinfo.confidence}")
                 
                 self._fill_tmdb_details(torinfo)
