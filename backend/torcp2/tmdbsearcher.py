@@ -176,9 +176,9 @@ class TMDbSearcher:
         if len(cuttitle) > 5:
             torinfo.id_score += 5
         if cntitle and (cntitle != title) :
-            torinfo.id_score += 5
+            torinfo.id_score += 8
         if extitle and (extitle != title) :
-            torinfo.id_score += 5
+            torinfo.id_score += 8
         logger.debug(f"title: {title}, cntitle: {cntitle}, extitle: {extitle}, init id_score: {torinfo.id_score}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
@@ -201,7 +201,7 @@ class TMDbSearcher:
                     torinfo.id_score += 3
 
                 if category != 'multi':
-                    torinfo.id_score += 5
+                    torinfo.id_score += 8
                 
                 self._fill_tmdb_details(torinfo)
                 return True
