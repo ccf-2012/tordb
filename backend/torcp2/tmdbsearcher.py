@@ -181,15 +181,15 @@ class TMDbSearcher:
             torinfo.confidence += 5
         if extitle and (extitle != title) :
             torinfo.confidence += 5
-        logger.debug(f"init confidence: {torinfo.confidence}")
+        logger.debug(f"title: {title}, cntitle: {cntitle}, extitle: {extitle}, init confidence: {torinfo.confidence}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
+        logger.debug(f"search list: {search_list}")
         for category, term in search_list:
             if not term:
                 continue
 
             result, match_type = self._perform_search(term, category, intyear)
-
             if result:
                 if category == 'multi':
                     self._save_tmdb_result(torinfo, result)

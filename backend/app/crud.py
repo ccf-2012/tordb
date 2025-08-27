@@ -255,7 +255,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
 
         # If confidence is too low, do not save to DB, but return the result for caller.
         logger.debug(f"confidence: {torinfo.confidence}")
-        if torinfo.confidence < 19:
+        if torinfo.confidence < 15:
             logger.warning(f"BLIND confidence too low: {torinfo.confidence} for {torinfo.torname}")
             # Create a temporary Media object without saving it to the database
             media_create = _create_media_schema_from_torinfo(torinfo)
