@@ -16,6 +16,7 @@ class Query(BaseModel):
 class TorrentBase(BaseModel):
     name: str
     infolink: Optional[str] = None
+    id_score: Optional[int] = None
 
 class TorrentCreate(TorrentBase):
     pass
@@ -48,6 +49,7 @@ class MediaBase(BaseModel):
     production_countries: Optional[str] = None
     custom_title: Optional[str] = None
     custom_path: Optional[str] = None
+    id_score: Optional[int] = None
 
 class MediaCreate(MediaBase):
     pass

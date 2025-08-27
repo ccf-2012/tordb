@@ -90,7 +90,7 @@ function Table({ columns, data, onEdit, onDelete }) {
                   <tr>
                     <td colSpan={visibleColumns.length} className="p-0">
                       <div className="p-3 bg-light">
-                        <h7>Torrents for {row.original.tmdb_title}</h7>
+                        <h7>Torrents for {row.original.tmdb_title} <span className="text-muted small">(Score: {row.original.id_score})</span></h7>
                         <ul className="list-group">
                           {row.original.torrents.map(t => 
                             <li key={t.id} className="list-group-item">{t.name}</li>
@@ -293,6 +293,7 @@ function App() {
               <div>{row.original.clean_title}</div>
               <div className="text-muted small">{row.original.tmdb_year}</div>
               {row.original.cntitle && <div className="text-muted small">{row.original.cntitle}</div>}
+              {row.original.id_score && <div className="text-muted small">Score: {row.original.id_score}</div>}
             </div>
           ),
           width: 60,

@@ -13,7 +13,7 @@ class Media(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     torname_regex = Column(String, index=True, nullable=True)
-    clean_title = Column(String, nullable=False)
+    clean_title = Column(String, index=True, nullable=False)
     cntitle = Column(String, nullable=True)
     tmdb_id = Column(Integer, index=True, nullable=True)
     imdb_id = Column(String, index=True, nullable=True)
@@ -30,6 +30,7 @@ class Media(Base):
     production_countries = Column(String, nullable=True)
     custom_title = Column(String, nullable=True)
     custom_path = Column(String, nullable=True)
+    id_score = Column(Integer, nullable=True)
 
     torrents = relationship("Torrent", back_populates="media", cascade="all, delete-orphan")
 
