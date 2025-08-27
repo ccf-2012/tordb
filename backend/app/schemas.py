@@ -16,7 +16,6 @@ class Query(BaseModel):
 class TorrentBase(BaseModel):
     name: str
     infolink: Optional[str] = None
-    id_score: Optional[int] = None
 
 class TorrentCreate(TorrentBase):
     pass
