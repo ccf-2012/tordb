@@ -178,10 +178,10 @@ class TMDbSearcher:
         # Title cleaning
         cuttitle = self._clean_title(title)
         if len(cuttitle) > 4:
-            torinfo.id_score += 8
+            torinfo.id_score += 4 + len(cuttitle)
 
         if cntitle:
-            torinfo.id_score += 8
+            torinfo.id_score += len(cntitle) * 2
         if extitle and (extitle != cntitle) :
             torinfo.id_score += 8
         if intyear > 1900:
