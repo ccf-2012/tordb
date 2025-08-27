@@ -1,6 +1,9 @@
 import os
 import sys
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.orm import Session
 
 # Adjust sys.path to allow imports from the parent `backend` directory
@@ -195,3 +198,17 @@ def delete_torrent(torrent_id: int, db: Session = Depends(get_db)):
     if db_torrent is None:
         raise HTTPException(status_code=404, detail="Torrent not found")
     return db_torrent
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as ex:
+            if ex.status_code == 404:
+                return await super().get_response('index.html', scope)
+            else:
+                raise ex
+
+frontend_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'build'))
+if os.path.exists(frontend_build_dir):
+    app.mount("/", SPAStaticFiles(directory=frontend_build_dir, html=True), name="spa")
