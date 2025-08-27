@@ -235,11 +235,10 @@ class TMDbSearcher:
 
         # Title cleaning
         cuttitle = self._clean_title(title)
-        if len(cuttitle) > 4:
-            torinfo.id_score += 4 + len(cuttitle)
-
         if cntitle:
             torinfo.id_score += len(cntitle) * 2
+        if title != cntitle:
+            torinfo.id_score += len(title)
         if extitle and (extitle != cntitle) :
             torinfo.id_score += 8
         if intyear > 1900:
@@ -267,12 +266,14 @@ class TMDbSearcher:
 
                 if cntitle:
                     if cntitle == torinfo.tmdb_title:
-                        torinfo.id_score += 20
+                        torinfo.id_score += 10 + len(cntitle)
                     else:
                         # 找到的tmdb_title，与 cntitle 最长公共子序列长度，接近len(tmdb_title)
                         length = longest_common_subsequence_length(cntitle, torinfo.tmdb_title)
-                        if abs(len(torinfo.tmdb_title) - length) < 3:
-                            torinfo.id_score += 10
+                        torinfo.id_score += 2 * length
+                        # TODO：下面方案待定
+                        # diff = 10 - 2 * abs(len(torinfo.tmdb_title) - len(cntitle))
+                        # torinfo.id_score += diff
                 self._fill_tmdb_details(torinfo)
                 return True
 
