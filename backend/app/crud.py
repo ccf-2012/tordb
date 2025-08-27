@@ -260,6 +260,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             # Create a temporary Media object without saving it to the database
             media_create = _create_media_schema_from_torinfo(torinfo)
             new_media = models.Media(**media_create.model_dump())
+            new_media.id_score = torinfo.id_score
             return new_media
 
         # Create new media and torrent

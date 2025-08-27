@@ -174,11 +174,14 @@ class TMDbSearcher:
         # Title cleaning
         cuttitle = self._clean_title(title)
         if len(cuttitle) > 4:
-            torinfo.id_score += 5
+            torinfo.id_score += 8
         if cntitle and (cntitle != title) :
             torinfo.id_score += 8
         if extitle and (extitle != title) :
             torinfo.id_score += 8
+        if intyear > 1900:
+            torinfo.id_score += 8
+
         logger.debug(f"Search ==>  title: {title}, cntitle: {cntitle}, extitle: {extitle}, year:{intyear}  init id_score: {torinfo.id_score}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
@@ -193,15 +196,13 @@ class TMDbSearcher:
                     self._save_tmdb_result(torinfo, result)
                 else:
                     self._save_tmdb_result(torinfo, result, media_type=category)
-                
+
                 # Update id_score
-                if match_type == 'strict':
-                    torinfo.id_score += 3
-                elif match_type == 'fuzzy':
-                    torinfo.id_score += 2
+                if intyear > 1900 and match_type == 'strict':
+                    torinfo.id_score += 5
 
                 if category != 'multi':
-                    torinfo.id_score += 8
+                    torinfo.id_score += 5
                 
                 self._fill_tmdb_details(torinfo)
                 return True
@@ -366,3 +367,5 @@ class TMDbSearcher:
         torinfo.vote_average = getattr(details, 'vote_average', 0)
         if hasattr(details, 'production_countries') and details.production_countries:
             torinfo.production_countries = details.production_countries[0].get('iso_3166_1', '')
+
+

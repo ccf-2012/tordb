@@ -74,6 +74,7 @@ class MediaUpdate(MediaBase):
 
 class Media(MediaBase):
     id: Optional[int] = None
+    id_score: Optional[int] = None
     torrents: List[Torrent] = []
 
     class Config:
