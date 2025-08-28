@@ -25,6 +25,11 @@ MANIFEST
 
 # configuration files
 *.ini
+.python-version
+.env
+# pyproject.toml
+uv.lock
+
 
 # test py
 tt_*

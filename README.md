@@ -43,7 +43,7 @@ uvicorn app.main:app --port 5009 --reload
 1. 初始分：输入title, cntitle, extitle;
    * 初始 score: 
    * 有 cntitle: score += len(cntitle) * 2
-   * title 与 cntitle 不同：score += len(cntitle)
+   * title 与 cntitle 不同：score += len(title)
    * 有 extitle 且与 cntitle不同 score += 8
    * 有 year score += 10
 2. 搜索

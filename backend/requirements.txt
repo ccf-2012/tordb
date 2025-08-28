@@ -8,3 +8,4 @@ Cinemagoer
 loguru
 tmdbv3api
 tortitle
+pytest-mock
