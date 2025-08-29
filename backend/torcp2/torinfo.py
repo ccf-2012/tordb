@@ -94,7 +94,7 @@ class TorrentParser:
         if tst:
             t.subtitle = tst.raw_name
             t.extitle = tst.extitle
-            t.season = t.season | tst.season
+            t.season = t.season or tst.season
         t.resolution = tt.resolution
         t.media_source = tt.media_source
         t.video_codec = tt.video

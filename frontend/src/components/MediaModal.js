@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form, Row, Col, Alert } from 'react-bootstrap';
+import { Modal, Button, Form, Row, Col, Alert, Tabs, Tab } from 'react-bootstrap';
 import axios from 'axios';
 
 // A dedicated component to display TMDb info in a clean, read-only format
@@ -38,21 +38,29 @@ function TMDbInfoBlock({ details }) {
 
 function MediaModal({ media, onSave, onClose }) {
   const [formData, setFormData] = useState({});
-  const [mode, setMode] = useState('tmdb');
+  const [activeTab, setActiveTab] = useState('tmdb'); // 'tmdb' or 'manual'
   const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     if (media) {
       setFormData(media);
-      setMode(media.tmdb_id ? 'tmdb' : 'manual');
+      if (media.tmdb_title && !media.tmdb_id) {
+        setActiveTab('manual');
+      } else {
+        setActiveTab('tmdb');
+      }
     } else {
       setFormData({
         torname_regex: '',
         clean_title: '',
         tmdb_id: '',
         tmdb_cat: 'movie',
+        tmdb_title: '',
+        tmdb_year: '',
+        origin_country: '',
+        tmdb_genres: '',
       });
-      setMode('tmdb');
+      setActiveTab('tmdb');
     }
   }, [media]);
 
@@ -62,7 +70,22 @@ function MediaModal({ media, onSave, onClose }) {
   };
 
   const handleSave = () => {
-    onSave(formData, mode);
+    const dataToSave = { ...formData };
+
+    // Ensure data types are correct before saving
+    const year = parseInt(dataToSave.tmdb_year, 10);
+    dataToSave.tmdb_year = isNaN(year) ? null : year;
+
+    // Convert empty string for regex to null to properly clear it
+    if (dataToSave.torname_regex === '') {
+      dataToSave.torname_regex = null;
+    }
+
+    if (activeTab === 'manual') {
+      dataToSave.tmdb_id = null; 
+    }
+    
+    onSave(dataToSave, activeTab);
   };
 
   const handleFetchTMDbDetails = () => {
@@ -80,7 +103,8 @@ function MediaModal({ media, onSave, onClose }) {
           tmdb_poster: data.poster_path,
           tmdb_year: (data.release_date || data.first_air_date)?.substring(0, 4),
           tmdb_genres: data.genres?.map(g => g.name).join(', '),
-          tmdb_overview: data.overview
+          tmdb_overview: data.overview,
+          origin_country: data.origin_country?.join(', ') || ''
         }));
       })
       .catch(error => {
@@ -96,7 +120,6 @@ function MediaModal({ media, onSave, onClose }) {
       </Modal.Header>
       <Modal.Body>
         <Form>
-          {/* Always show the regex field at the top */}
           <Form.Group className="mb-3">
             <Form.Label>种子名称匹配规则</Form.Label>
             <Form.Control 
@@ -109,45 +132,82 @@ function MediaModal({ media, onSave, onClose }) {
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>标题</Form.Label>
+            <Form.Label>整理后标题</Form.Label>
             <Form.Control 
               type="text" 
               name="clean_title" 
               value={formData.clean_title || ''} 
               onChange={handleChange} 
-              placeholder='例如: "My Movie Title"'
+              placeholder='后端要求此项必填'
+              required
             />
           </Form.Group>
 
-          {/* TMDb Details Section */}
-          <h5 className="mt-4">TMDb 匹配</h5>
           <hr />
-          <Row className="align-items-end">
-            <Col md={5}>
-              <Form.Group>
-                <Form.Label>TMDb ID</Form.Label>
-                <Form.Control type="number" name="tmdb_id" value={formData.tmdb_id || ''} onChange={handleChange} placeholder="例如: 603" />
-              </Form.Group>
-            </Col>
-            <Col md={4}>
-              <Form.Group>
-                <Form.Label>类别</Form.Label>
-                <Form.Select name="tmdb_cat" value={formData.tmdb_cat || ''} onChange={handleChange}>
-                  <option value="movie">电影</option>
-                  <option value="tv">电视剧</option>
-                </Form.Select>
-              </Form.Group>
-            </Col>
-            <Col md={3}>
-              <Button variant="info" onClick={handleFetchTMDbDetails} className="w-100">获取</Button>
-            </Col>
-          </Row>
-          {fetchError && <Alert variant="danger" className="mt-3">{fetchError}</Alert>}
-          
-          <div className="mt-3">
-            <TMDbInfoBlock details={formData} />
-          </div>
 
+          <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k)} id="media-entry-tabs" className="mb-3" fill>
+            <Tab eventKey="tmdb" title="TMDb 查找">
+              <div className="p-2">
+                <Row className="align-items-end">
+                  <Col md={5}>
+                    <Form.Group>
+                      <Form.Label>TMDb ID</Form.Label>
+                      <Form.Control type="number" name="tmdb_id" value={formData.tmdb_id || ''} onChange={handleChange} placeholder="例如: 603" />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label>类别</Form.Label>
+                      <Form.Select name="tmdb_cat" value={formData.tmdb_cat || 'movie'} onChange={handleChange}>
+                        <option value="movie">电影</option>
+                        <option value="tv">电视剧</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={3}>
+                    <Button variant="info" onClick={handleFetchTMDbDetails} className="w-100">获取</Button>
+                  </Col>
+                </Row>
+                {fetchError && <Alert variant="danger" className="mt-3">{fetchError}</Alert>}
+                <div className="mt-3">
+                  <TMDbInfoBlock details={formData} />
+                </div>
+              </div>
+            </Tab>
+            <Tab eventKey="manual" title="手动输入">
+              <div className="p-2">
+                <Form.Group className="mb-3">
+                  <Form.Label>标题</Form.Label>
+                  <Form.Control type="text" name="tmdb_title" value={formData.tmdb_title || ''} onChange={handleChange} />
+                </Form.Group>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>年份</Form.Label>
+                      <Form.Control type="number" name="tmdb_year" value={formData.tmdb_year || ''} onChange={handleChange} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>类别</Form.Label>
+                      <Form.Select name="tmdb_cat" value={formData.tmdb_cat || 'movie'} onChange={handleChange}>
+                        <option value="movie">电影</option>
+                        <option value="tv">电视剧</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Form.Group className="mb-3">
+                  <Form.Label>国家/地区</Form.Label>
+                  <Form.Control type="text" name="origin_country" value={formData.origin_country || ''} onChange={handleChange} placeholder="例如: US, GB" />
+                </Form.Group>
+                <Form.Group className="mb-3">
+                  <Form.Label>类型</Form.Label>
+                  <Form.Control type="text" name="tmdb_genres" value={formData.tmdb_genres || ''} onChange={handleChange} placeholder="例如: Action, Science Fiction" />
+                </Form.Group>
+              </div>
+            </Tab>
+          </Tabs>
         </Form>
       </Modal.Body>
       <Modal.Footer>

@@ -54,8 +54,7 @@ class MediaBase(BaseModel):
 class MediaCreate(MediaBase):
     pass
 
-class MediaUpdate(MediaBase):
-    created_at: Optional[datetime] = None
+class MediaUpdate(BaseModel):
     torname_regex: Optional[str] = None
     clean_title: Optional[str] = None
     cntitle: Optional[str] = None
@@ -74,11 +73,12 @@ class MediaUpdate(MediaBase):
     production_countries: Optional[str] = None
     custom_title: Optional[str] = None
     custom_path: Optional[str] = None
+    id_score: Optional[int] = None
+
 
 class Media(MediaBase):
-    id: Optional[int] = None
+    id: int
     created_at: Optional[datetime] = None
-    id_score: Optional[int] = None
     torrents: List[Torrent] = []
 
     class Config:

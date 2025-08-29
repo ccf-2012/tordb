@@ -27,7 +27,20 @@ def get_all_media(db: Session, skip: int = 0, limit: int = 100):
         return {"items": [], "total": total_groups}
 
     # 3. Get all media items that belong to the paginated tmdb_id's
-    media_items = db.query(models.Media).filter(models.Media.tmdb_id.in_(paginated_tmdb_ids)).all()
+    # Handle the case where NULL is one of the distinct tmdb_ids
+    has_null = None in paginated_tmdb_ids
+    non_null_ids = [i for i in paginated_tmdb_ids if i is not None]
+    
+    conditions = []
+    if non_null_ids:
+        conditions.append(models.Media.tmdb_id.in_(non_null_ids))
+    if has_null:
+        conditions.append(models.Media.tmdb_id.is_(None))
+    
+    if not conditions:
+        return {"items": [], "total": total_groups}
+
+    media_items = db.query(models.Media).filter(or_(*conditions)).all()
     
     return {"items": media_items, "total": total_groups}
 

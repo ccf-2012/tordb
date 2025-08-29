@@ -54,32 +54,41 @@ function Table({ columns, data, onEdit, onDelete }) {
     <div className="table-responsive">
       <table {...getTableProps()} className="table table-sm table-hover" style={{ width: '100%' }}>
         <thead className="thead-dark">
-          {headerGroups.map(headerGroup => (
-            <tr {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map(column => (
-                // Add sorting props to the header
-                <th {...column.getHeaderProps()} style={{ minWidth: column.minWidth, width: column.width, maxWidth: column.maxWidth, cursor: 'pointer' }}>
-                  {column.render('Header')}
-                </th>
-              ))}
-            </tr>
-          ))}
+          {headerGroups.map(headerGroup => {
+            const { key, ...rest } = headerGroup.getHeaderGroupProps();
+            return (
+              <tr key={key} {...rest}>
+                {headerGroup.headers.map(column => {
+                  const { key, ...rest } = column.getHeaderProps({
+                    style: { minWidth: column.minWidth, width: column.width, maxWidth: column.maxWidth, cursor: 'pointer' }
+                  });
+                  return (
+                    <th key={key} {...rest}>
+                      {column.render('Header')}
+                    </th>
+                  );
+                })}
+              </tr>
+            )
+          })}
         </thead>
         <tbody {...getTableBodyProps()}>
           {rows.map(row => {
             prepareRow(row);
+            const { key, ...restRowProps } = row.getRowProps({ onClick: () => row.toggleRowExpanded(), style: { cursor: 'pointer' } });
             return (
-              <React.Fragment key={row.getRowProps().key}>
-                <tr {...row.getRowProps({ onClick: () => row.toggleRowExpanded(), style: { cursor: 'pointer' } })}>
-                  {row.cells.map(cell => (
-                    <td {...cell.getCellProps({style: {minWidth: cell.column.minWidth, width: cell.column.width, maxWidth: cell.column.maxWidth}})}>{cell.render('Cell')}</td>
-                  ))}
+              <React.Fragment key={key}>
+                <tr {...restRowProps}>
+                  {row.cells.map(cell => {
+                    const { key, ...rest } = cell.getCellProps({style: {minWidth: cell.column.minWidth, width: cell.column.width, maxWidth: cell.column.maxWidth}});
+                    return <td key={key} {...rest}>{cell.render('Cell')}</td>
+                  })}
                 </tr>
                 {row.isExpanded ? (
                   <tr>
                     <td colSpan={visibleColumns.length} className="p-0">
                       <div className="p-3 bg-light">
-                        <h7>种子列表 {row.original.tmdb_title} <span className="text-muted small">(分数: {row.original.id_score})</span></h7>
+                        <h6>种子列表 {row.original.tmdb_title} <span className="text-muted small">(分数: {row.original.id_score})</span></h6>
                         <ul className="list-group">
                           {row.original.torrents.map(t => 
                             <li key={t.id} className="list-group-item">{t.name}</li>
@@ -289,8 +298,8 @@ function App() {
             id: 'actions',
             Cell: ({ row }) => (
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="outline-warning" size="sm" style={{ width: '45px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
-                  <Button variant="outline-danger" size="sm" style={{ width: '45px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
+                  <Button variant="outline-warning" size="sm" style={{ width: '35px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
+                  <Button variant="outline-danger" size="sm" style={{ width: '35px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
               </div>
             ),
             width: 30,
