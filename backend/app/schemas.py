@@ -22,8 +22,8 @@ class TorrentCreate(TorrentBase):
     pass
 
 class Torrent(TorrentBase):
-    id: int
-    media_id: int
+    id: Optional[int] = None
+    media_id: Optional[int] = None
 
     class Config:
         from_attributes = True

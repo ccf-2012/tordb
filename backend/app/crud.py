@@ -275,6 +275,10 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             media_create = _create_media_schema_from_torinfo(torinfo)
             new_media = models.Media(**media_create.model_dump())
             new_media.id_score = torinfo.id_score
+            # Also create a temporary torrent and add it to the media
+            torrent_create = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
+            new_torrent = models.Torrent(**torrent_create.model_dump())
+            new_media.torrents.append(new_torrent)
             return new_media
 
         # Create new media and torrent
