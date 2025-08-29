@@ -200,7 +200,7 @@ def delete_torrent(db: Session, torrent_id: int) -> models.Torrent | None:
 
 # --- Main Search Logic ---
 
-def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.Media | None:
+def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.Media | schemas.Media | None:
     # 1. Exact torrent name match
     if torrent := find_torrent_by_name(db, torinfo.torname):
         logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
@@ -271,15 +271,18 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
         logger.debug(f"score: {torinfo.id_score}")
         if torinfo.id_score < 19:
             logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
-            # Create a temporary Media object without saving it to the database
-            media_create = _create_media_schema_from_torinfo(torinfo)
-            new_media = models.Media(**media_create.model_dump())
-            new_media.id_score = torinfo.id_score
-            # Also create a temporary torrent and add it to the media
-            torrent_create = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
-            new_torrent = models.Torrent(**torrent_create.model_dump())
-            new_media.torrents.append(new_torrent)
-            return new_media
+            # Manually create the Pydantic schema object to avoid SQLAlchemy conversion issues
+            media_data = _create_media_schema_from_torinfo(torinfo)
+            torrent_data = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
+
+            # Create a full Media schema object from the data
+            response_media = schemas.Media(**media_data.model_dump())
+            
+            # Create the Torrent schema object and add it to the list
+            response_media.torrents.append(schemas.Torrent(**torrent_data.model_dump()))
+
+            # The function's return type is now updated to reflect this possibility
+            return response_media
 
         # Create new media and torrent
         logger.info(f"TMDb: Found media by blind search: {torinfo.tmdb_title}")

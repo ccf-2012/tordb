@@ -77,7 +77,7 @@ class MediaUpdate(BaseModel):
 
 
 class Media(MediaBase):
-    id: int
+    id: Optional[int] = None
     created_at: Optional[datetime] = None
     torrents: List[Torrent] = []
 
