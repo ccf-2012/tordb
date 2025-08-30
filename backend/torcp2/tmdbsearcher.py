@@ -177,7 +177,8 @@ class TMDbSearcher:
 
         try:
             if search_cat == 'tv':
-                results = search.tv_shows(term=search_term, adult=True, release_year=stryear)
+                # no year for tv
+                results = search.tv_shows(term=search_term, adult=True)
             elif search_cat == 'movie':
                 results = search.movies(term=search_term, adult=True, year=stryear)
             else: # multi
@@ -355,8 +356,13 @@ class TMDbSearcher:
                 if resyear == year:
                     matchList.append(result)
             else: # fuzzy
-                if resyear in [year - 1, year, year + 1]:
+                if resyear == 0:
                     matchList.append(result)
+                elif resyear in [year - 1, year, year + 1]:
+                    matchList.append(result)
+                else:
+                    return None
+        
         
         if not matchList:
             return None
