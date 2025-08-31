@@ -180,7 +180,7 @@ function App() {
 
   const handleOpenModal = (media = null) => {
     if (media && media.originalItems) { // It's a group from the table
-      const itemToEdit = media.originalItems.find(item => item.torname_regex) || media.originalItems[0];
+      const itemToEdit = media.originalItems.find(item => item.torname_regex && item.torname_regex.trim()) || media.originalItems[0];
       setSelectedMedia(itemToEdit);
     } else { // It's for a new item or a direct item object
       setSelectedMedia(media);
@@ -303,7 +303,7 @@ function App() {
             id: 'actions',
             Cell: ({ row }) => (
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="outline-warning" size="sm" style={{ width: '35px' }} onClick={() => handleOpenModal(row.original.originalItems[0])} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
+                  <Button variant="outline-warning" size="sm" style={{ width: '35px' }} onClick={() => handleOpenModal(row.original)} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
                   <Button variant="outline-danger" size="sm" style={{ width: '35px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
               </div>
             ),
