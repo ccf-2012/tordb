@@ -104,7 +104,7 @@ function MediaModal({ media, onSave, onClose }) {
           tmdb_year: (data.release_date || data.first_air_date)?.substring(0, 4),
           tmdb_genres: data.genres?.map(g => g.name).join(', '),
           tmdb_overview: data.overview,
-          origin_country: data.origin_country?.join(', ') || ''
+          origin_country: Array.isArray(data.origin_country) ? data.origin_country.join(', ') : data.origin_country || ''
         }));
       })
       .catch(error => {
