@@ -179,7 +179,12 @@ function App() {
   };
 
   const handleOpenModal = (media = null) => {
-    setSelectedMedia(media);
+    if (media && media.originalItems) { // It's a group from the table
+      const itemToEdit = media.originalItems.find(item => item.torname_regex) || media.originalItems[0];
+      setSelectedMedia(itemToEdit);
+    } else { // It's for a new item or a direct item object
+      setSelectedMedia(media);
+    }
     setShowModal(true);
   };
 

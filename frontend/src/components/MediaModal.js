@@ -121,18 +121,18 @@ function MediaModal({ media, onSave, onClose }) {
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
-            <Form.Label>种子名称匹配规则</Form.Label>
+            <Form.Label>种子全名匹配的正则规则</Form.Label>
             <Form.Control 
               type="text" 
               name="torname_regex" 
               value={formData.torname_regex || ''} 
               onChange={handleChange} 
-              placeholder='例如: "My Movie Title 2023"'
+              placeholder='例如: "My Movie .*\(2023\)"'
             />
           </Form.Group>
 
           <Form.Group className="mb-3">
-            <Form.Label>整理后标题</Form.Label>
+            <Form.Label>用于匹配的清理后标题</Form.Label>
             <Form.Control 
               type="text" 
               name="clean_title" 
