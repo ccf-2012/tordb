@@ -263,6 +263,7 @@ function App() {
                   {row.original.tmdb_cat}
                 </span>
                 {row.original.tmdb_genres && <span className="text-muted">{row.original.tmdb_genres}</span>}
+                <span className="text-muted ms-2">{new Date(row.original.created_at).toLocaleString()}</span>
               </div>
               <p className="small" style={{ whiteSpace: 'pre-wrap', maxHeight: '70px', overflowY: 'auto' }}>
                 {row.original.tmdb_overview}
