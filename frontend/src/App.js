@@ -13,32 +13,35 @@ const GROUPS_PER_PAGE = 10;
 const groupMediaByTmdbId = (mediaList) => {
   if (!mediaList) return [];
 
-  // 1. Sort the original list by created_at descending to ensure the newest are first
+  // 1. Sort the original list by created_at descending
   const sortedList = [...mediaList].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  // 2. Group the sorted list
-  const grouped = sortedList.reduce((acc, media) => {
+  // 2. Group the sorted list while preserving order
+  const groupedResult = [];
+  const tmdbIdMap = new Map();
+
+  sortedList.forEach(media => {
     const key = media.tmdb_id;
-    if (!acc[key]) {
-      acc[key] = {
+    if (!tmdbIdMap.has(key)) {
+      const newGroup = {
         ...media,
         originalItems: [media],
         torrents: [...media.torrents],
-        torname_regex_list: [media.torname_regex].filter(Boolean), // Ensure only non-empty regex are added
+        torname_regex_list: [media.torname_regex].filter(Boolean),
       };
+      tmdbIdMap.set(key, newGroup);
+      groupedResult.push(newGroup);
     } else {
-      // The first item in the sorted list is the newest, so its properties should be preferred.
-      acc[key].originalItems.push(media);
-      acc[key].torrents.push(...media.torrents);
-      if (media.torname_regex && !acc[key].torname_regex_list.includes(media.torname_regex)) {
-        acc[key].torname_regex_list.push(media.torname_regex);
+      const existingGroup = tmdbIdMap.get(key);
+      existingGroup.originalItems.push(media);
+      existingGroup.torrents.push(...media.torrents);
+      if (media.torname_regex && !existingGroup.torname_regex_list.includes(media.torname_regex)) {
+        existingGroup.torname_regex_list.push(media.torname_regex);
       }
     }
-    return acc;
-  }, {});
+  });
 
-  // 3. Return the values, which will now be in a sorted-then-grouped order
-  return Object.values(grouped);
+  return groupedResult;
 };
 
 // The Table component now uses sorting
