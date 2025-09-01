@@ -20,7 +20,7 @@ def get_all_media(db: Session, skip: int = 0, limit: int = 100):
     total_groups = db.query(func.count(models.Media.tmdb_id.distinct())).scalar()
 
     # 2. Get the paginated list of distinct tmdb_id's
-    paginated_tmdb_ids_query = db.query(models.Media.tmdb_id).distinct().order_by(models.Media.created_at.desc()).offset(skip).limit(limit)
+    paginated_tmdb_ids_query = db.query(models.Media.tmdb_id).distinct().offset(skip).limit(limit)
     paginated_tmdb_ids = [id[0] for id in paginated_tmdb_ids_query.all()]
 
     if not paginated_tmdb_ids:
