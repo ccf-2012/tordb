@@ -16,33 +16,29 @@ from sqlalchemy import func, or_
 from . import models, schemas
 
 def get_all_media(db: Session, skip: int = 0, limit: int = 100):
-    # 1. Get the total count of distinct groups (tmdb_id)
-    total_groups = db.query(func.count(models.Media.tmdb_id.distinct())).scalar()
+    # 1. Fetch all media items, sorted by creation date
+    all_media = db.query(models.Media).order_by(models.Media.created_at.desc()).all()
 
-    # 2. Get the paginated list of distinct tmdb_id's
-    paginated_tmdb_ids_query = db.query(models.Media.tmdb_id).distinct().offset(skip).limit(limit)
-    paginated_tmdb_ids = [id[0] for id in paginated_tmdb_ids_query.all()]
+    # 2. Group media items by tmdb_id in memory
+    grouped_media = {}
+    for media in all_media:
+        key = media.tmdb_id
+        if key not in grouped_media:
+            grouped_media[key] = []
+        grouped_media[key].append(media)
 
-    if not paginated_tmdb_ids:
-        return {"items": [], "total": total_groups}
+    # 3. Get the total number of groups
+    total_groups = len(grouped_media)
 
-    # 3. Get all media items that belong to the paginated tmdb_id's
-    # Handle the case where NULL is one of the distinct tmdb_ids
-    has_null = None in paginated_tmdb_ids
-    non_null_ids = [i for i in paginated_tmdb_ids if i is not None]
+    # 4. Paginate the grouped items
+    paginated_keys = list(grouped_media.keys())[skip:skip+limit]
     
-    conditions = []
-    if non_null_ids:
-        conditions.append(models.Media.tmdb_id.in_(non_null_ids))
-    if has_null:
-        conditions.append(models.Media.tmdb_id.is_(None))
-    
-    if not conditions:
-        return {"items": [], "total": total_groups}
+    # 5. Construct the final list of media items for the current page
+    result_items = []
+    for key in paginated_keys:
+        result_items.extend(grouped_media[key])
 
-    media_items = db.query(models.Media).filter(or_(*conditions)).all()
-    
-    return {"items": media_items, "total": total_groups}
+    return {"items": result_items, "total": total_groups}
 
 def search_media(db: Session, q: str):
     search_query = f"%{q}%"

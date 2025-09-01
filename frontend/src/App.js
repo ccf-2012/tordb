@@ -13,14 +13,11 @@ const GROUPS_PER_PAGE = 10;
 const groupMediaByTmdbId = (mediaList) => {
   if (!mediaList) return [];
 
-  // 1. Sort the original list by created_at descending
-  const sortedList = [...mediaList].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  // 2. Group the sorted list while preserving order
+  // Group the media list while preserving order
   const groupedResult = [];
   const tmdbIdMap = new Map();
 
-  sortedList.forEach(media => {
+  mediaList.forEach(media => {
     const key = media.tmdb_id;
     if (!tmdbIdMap.has(key)) {
       const newGroup = {
