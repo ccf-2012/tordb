@@ -81,6 +81,8 @@ def create_media_from_tmdb(
     tmdb_id: int,
     db: Session = Depends(get_db)
 ):
+    if tmdb_id <= 0:
+        raise HTTPException(status_code=400, detail="TMDb ID must be a positive integer.")
     try:
         # Fetch details from TMDb using TorrentInfo
         n1 = TorrentInfo()

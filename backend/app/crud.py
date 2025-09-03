@@ -16,29 +16,13 @@ from sqlalchemy import func, or_
 from . import models, schemas
 
 def get_all_media(db: Session, skip: int = 0, limit: int = 100):
-    # 1. Fetch all media items, sorted by creation date
-    all_media = db.query(models.Media).order_by(models.Media.created_at.desc()).all()
-
-    # 2. Group media items by tmdb_id in memory
-    grouped_media = {}
-    for media in all_media:
-        key = media.tmdb_id
-        if key not in grouped_media:
-            grouped_media[key] = []
-        grouped_media[key].append(media)
-
-    # 3. Get the total number of groups
-    total_groups = len(grouped_media)
-
-    # 4. Paginate the grouped items
-    paginated_keys = list(grouped_media.keys())[skip:skip+limit]
+    # Query for paginated media items, sorted by creation date
+    items = db.query(models.Media).order_by(models.Media.created_at.desc()).offset(skip).limit(limit).all()
     
-    # 5. Construct the final list of media items for the current page
-    result_items = []
-    for key in paginated_keys:
-        result_items.extend(grouped_media[key])
-
-    return {"items": result_items, "total": total_groups}
+    # Get the total count of all media items for pagination
+    total = db.query(func.count(models.Media.id)).scalar()
+    
+    return {"items": items, "total": total}
 
 def search_media(db: Session, q: str):
     search_query = f"%{q}%"
@@ -63,7 +47,7 @@ def find_torrent_by_name(db: Session, name: str) -> models.Torrent | None:
     return db.query(models.Torrent).filter(models.Torrent.name == name).first()
 
 def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | None:
-    # First, find potential candidates based on clean_title
+    # TODO: 这里要求传入的torinfo.clean_title 等于数据库中的值，但是有时是非常像，只有一个空格符号没对上就不会匹配
     candidates = db.query(models.Media).filter(models.Media.clean_title == torinfo.clean_title).all()
     if not candidates:
         return None

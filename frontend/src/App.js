@@ -1,45 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Button, Container, Row, Col, InputGroup, FormControl, Alert, Pagination } from 'react-bootstrap';
-// Import useSortBy
 import { useTable, useExpanded } from 'react-table';
 import MediaModal from './components/MediaModal';
 import { useMediaQuery } from 'react-responsive';
 
-const GROUPS_PER_PAGE = 10;
-
-// Helper function to group media items by tmdb_id
-const groupMediaByTmdbId = (mediaList) => {
-  if (!mediaList) return [];
-
-  // Group the media list while preserving order
-  const groupedResult = [];
-  const tmdbIdMap = new Map();
-
-  mediaList.forEach(media => {
-    const key = media.tmdb_id;
-    if (!tmdbIdMap.has(key)) {
-      const newGroup = {
-        ...media,
-        originalItems: [media],
-        torrents: [...media.torrents],
-        torname_regex_list: [media.torname_regex].filter(Boolean),
-      };
-      tmdbIdMap.set(key, newGroup);
-      groupedResult.push(newGroup);
-    } else {
-      const existingGroup = tmdbIdMap.get(key);
-      existingGroup.originalItems.push(media);
-      existingGroup.torrents.push(...media.torrents);
-      if (media.torname_regex && !existingGroup.torname_regex_list.includes(media.torname_regex)) {
-        existingGroup.torname_regex_list.push(media.torname_regex);
-      }
-    }
-  });
-
-  return groupedResult;
-};
+const ITEMS_PER_PAGE = 10;
 
 // The Table component now uses sorting
 function Table({ columns, data, onEdit, onDelete }) {
@@ -123,7 +90,7 @@ function App() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalGroups, setTotalGroups] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -131,16 +98,15 @@ function App() {
 
   const isMobile = useMediaQuery({ query: '(max-width: 768px)' });
 
-  const groupedMedia = useMemo(() => groupMediaByTmdbId(mediaList), [mediaList]);
-  const totalPages = Math.ceil(totalGroups / GROUPS_PER_PAGE);
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const fetchMedia = (page) => {
     setLoading(true);
-    const skip = (page - 1) * GROUPS_PER_PAGE;
-    axios.get(`/api/media/?skip=${skip}&limit=${GROUPS_PER_PAGE}`)
+    const skip = (page - 1) * ITEMS_PER_PAGE;
+    axios.get(`/api/media/?skip=${skip}&limit=${ITEMS_PER_PAGE}`)
       .then(response => {
         setMediaList(response.data.items);
-        setTotalGroups(response.data.total);
+        setTotalItems(response.data.total);
         setLoading(false);
       })
       .catch(error => {
@@ -169,7 +135,7 @@ function App() {
     axios.get(`/api/media/search?q=${dbSearchQuery}`)
       .then(response => {
         setMediaList(response.data.items);
-        setTotalGroups(response.data.total);
+        setTotalItems(response.data.total);
         // Reset to page 1 for search results
         setCurrentPage(1); 
         setLoading(false);
@@ -187,12 +153,7 @@ function App() {
   };
 
   const handleOpenModal = (media = null) => {
-    if (media && media.originalItems) { // It's a group from the table
-      const itemToEdit = media.originalItems.find(item => item.torname_regex && item.torname_regex.trim()) || media.originalItems[0];
-      setSelectedMedia(itemToEdit);
-    } else { // It's for a new item or a direct item object
-      setSelectedMedia(media);
-    }
+    setSelectedMedia(media);
     setShowModal(true);
   };
 
@@ -229,7 +190,7 @@ function App() {
     }
   };
 
-  const columns = useMemo(
+  const columns = React.useMemo(
     () => {
       const baseColumns = [
         {
@@ -290,13 +251,9 @@ function App() {
         baseColumns.push(
           {
             Header: '规则',
-            accessor: 'torname_regex_list',
+            accessor: 'torname_regex',
             Cell: ({ value }) => (
-              <ul className="list-unstyled mb-0 small">
-                {value.map((regex, index) => (
-                  <li key={index}><code style={{ whiteSpace: 'normal' }}>{regex}</code></li>
-                ))}
-              </ul>
+              value ? <code style={{ whiteSpace: 'normal' }}>{value}</code> : null
             ),
             width: 40,
           },
@@ -313,7 +270,7 @@ function App() {
             Cell: ({ row }) => (
               <div className="text-center" onClick={(e) => e.stopPropagation()}>
                   <Button variant="outline-warning" size="sm" style={{ width: '35px' }} onClick={() => handleOpenModal(row.original)} title="编辑"><span role="img" aria-label="edit">&#9998;</span></Button>
-                  <Button variant="outline-danger" size="sm" style={{ width: '35px' }} onClick={() => handleDeleteMedia(row.original.originalItems[0].id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
+                  <Button variant="outline-danger" size="sm" style={{ width: '35px' }} onClick={() => handleDeleteMedia(row.original.id)} title="删除"><span role="img" aria-label="delete">&#128465;</span></Button>
               </div>
             ),
             width: 30,
@@ -355,11 +312,11 @@ function App() {
         <div>加载中...</div>
       ) : (
         <>
-          <Table columns={columns} data={groupedMedia} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
+          <Table columns={columns} data={mediaList} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
           {totalPages > 0 && (
             <Row className="justify-content-center align-items-center mt-3">
               <Col xs="auto" className="text-muted small me-3 d-none d-md-block">
-                第 {currentPage} 页 / 共 {totalPages} 页 (总计: {totalGroups})
+                第 {currentPage} 页 / 共 {totalPages} 页 (总计: {totalItems})
               </Col>
               <Col xs="auto">
                 <Pagination size={isMobile ? 'sm' : undefined}>
