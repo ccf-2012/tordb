@@ -218,7 +218,7 @@ function App() {
           accessor: 'tmdb_title',
           Cell: ({ row }) => (
             <div>
-              <h6 className="mb-1">{row.original.tmdb_title} <span className="text-muted font-weight-normal">({row.original.tmdb_year})</span></h6>
+              <h6 className="mb-1">{row.original.tmdb_title} {(row.original.tmdb_id == 0 || row.original.tmdb_id === null) && <span className="badge bg-success ms-2">自定义</span>} <span className="text-muted font-weight-normal">({row.original.tmdb_year})</span></h6>
               <div className="small mb-1">
                 <span className={`badge ${row.original.tmdb_cat === 'movie' ? 'tag-movie' : 'tag-tv'} me-1`}>
                   {row.original.tmdb_cat}
@@ -231,7 +231,7 @@ function App() {
               </p>
             </div>
           ),
-          width: '100%',
+          width: '60%',
         },
         {
           Header: '匹配标题',
@@ -243,7 +243,7 @@ function App() {
               {row.original.cntitle && <div className="text-muted small">{row.original.cntitle}</div>}
             </div>
           ),
-          width: 60,
+          width: 220,
         },
       ];
 

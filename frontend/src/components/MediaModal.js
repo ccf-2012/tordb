@@ -25,7 +25,7 @@ function TMDbInfoBlock({ details }) {
           )}
         </Col>
         <Col md={9}>
-          <h4>{details.tmdb_title} <span className="text-muted">({details.tmdb_year})</span></h4>
+          <h4>{details.tmdb_title} {(details.tmdb_id == 0 || details.tmdb_id === null) && <span className="badge bg-info ms-2">自定义</span>} <span className="text-muted">({details.tmdb_year})</span></h4>
           <p className="mb-1"><strong>类型:</strong> {details.tmdb_genres || '无'}</p>
           <p className="small mt-2" style={{maxHeight: '120px', overflowY: 'auto'}}>
             {details.tmdb_overview || '无可用概述。'}
