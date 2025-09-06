@@ -224,6 +224,11 @@ function App() {
                   {row.original.tmdb_cat}
                 </span>
                 {row.original.tmdb_genres && <span className="text-muted">{row.original.tmdb_genres}</span>}
+                {row.original.seasons && row.original.seasons.length > 0 && (
+                  <span className="text-muted ms-2">
+                    {row.original.seasons.map(season => `S${String(season.season_number).padStart(2, '0')}(共${season.episode_count}集)`).join(' ')}
+                  </span>
+                )}
                 <span className="text-muted ms-2">{new Date(row.original.created_at).toLocaleString()}</span>
               </div>
               <p className="small" style={{ whiteSpace: 'pre-wrap', maxHeight: '70px', overflowY: 'auto' }}>

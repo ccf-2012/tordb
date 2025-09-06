@@ -440,4 +440,18 @@ class TMDbSearcher:
         if hasattr(details, 'production_countries') and details.production_countries:
             torinfo.production_countries = details.production_countries[0].get('iso_3166_1', '')
 
+        # Fill in seasons details for TV shows
+        if torinfo.tmdb_cat == 'tv' and hasattr(details, 'seasons'):
+            seasons_data = []
+            for season in details.seasons:
+                seasons_data.append({
+                    'season_number': season.get('season_number'),
+                    'air_date': season.get('air_date'),
+                    'episode_count': season.get('episode_count'),
+                    'name': season.get('name'),
+                    'overview': season.get('overview'),
+                    'poster_path': season.get('poster_path'),
+                })
+            torinfo.seasons = seasons_data
+
 

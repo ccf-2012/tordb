@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -33,6 +33,7 @@ class Media(Base):
     custom_title = Column(String, nullable=True)
     custom_path = Column(String, nullable=True)
     id_score = Column(Integer, nullable=True)
+    seasons = Column(JSON, nullable=True)
 
     torrents = relationship("Torrent", back_populates="media", cascade="all, delete-orphan")
 

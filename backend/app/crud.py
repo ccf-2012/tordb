@@ -136,6 +136,7 @@ def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.MediaCrea
         production_countries=torinfo.production_countries,
         tmdb_genres=tmdb_genres,
         id_score=torinfo.id_score,
+        seasons=torinfo.seasons,
     )
 
 def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media:

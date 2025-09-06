@@ -74,6 +74,7 @@ class MediaUpdate(BaseModel):
     custom_title: Optional[str] = None
     custom_path: Optional[str] = None
     id_score: Optional[int] = None
+    seasons: Optional[List[dict]] = None
 
 
 class Media(MediaBase):
