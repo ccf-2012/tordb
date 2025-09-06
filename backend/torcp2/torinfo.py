@@ -43,6 +43,7 @@ class TorrentInfo:
     vote_average = 0
     production_countries = ''
     id_score = 0
+    seasons = []
 
     def __str__(self) -> str:
         """美化输出格式"""
