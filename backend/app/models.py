@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-import datetime
+from datetime import datetime, timezone
 
 DATABASE_URL = "sqlite:///./tmdb_media.db"
 
@@ -13,7 +13,7 @@ class Media(Base):
     __tablename__ = "media"
 
     id = Column(Integer, primary_key=True, index=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     torname_regex = Column(String, index=True, nullable=True)
     clean_title = Column(String, index=True, nullable=False)
     cntitle = Column(String, nullable=True)

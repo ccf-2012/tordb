@@ -407,6 +407,7 @@ class TMDbSearcher:
         return torinfo.imdb_id
 
     def _fill_tmdb_details(self, torinfo, details=None):
+        logger.debug(f"Filling details for {torinfo.tmdb_cat}-{torinfo.tmdb_id}")
         if not torinfo.tmdb_id:
             return torinfo
 
@@ -445,12 +446,12 @@ class TMDbSearcher:
             seasons_data = []
             for season in details.seasons:
                 seasons_data.append({
-                    'season_number': season.get('season_number'),
-                    'air_date': season.get('air_date'),
-                    'episode_count': season.get('episode_count'),
-                    'name': season.get('name'),
-                    'overview': season.get('overview'),
-                    'poster_path': season.get('poster_path'),
+                    'season_number': getattr(season, 'season_number', None),
+                    'air_date': getattr(season, 'air_date', None),
+                    'episode_count': getattr(season, 'episode_count', None),
+                    'name': getattr(season, 'name', None),
+                    'overview': getattr(season, 'overview', None),
+                    'poster_path': getattr(season, 'poster_path', None),
                 })
             torinfo.seasons = seasons_data
 

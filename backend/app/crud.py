@@ -109,6 +109,7 @@ def find_media_by_imdb_id(db: Session, imdb_id: str) -> models.Media | None:
 # --- Create Operations ---
 
 def create_media(db: Session, media: schemas.MediaCreate) -> models.Media:
+    logger.debug(f"Creating media with data: {media.model_dump_json(indent=2)}")
     if not media.tmdb_id:
         # Find the minimum tmdb_id that is less than 0
         min_id = db.query(func.min(models.Media.tmdb_id)).filter(models.Media.tmdb_id < 0).scalar()
