@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 # --- Query Schema for the main search endpoint ---
 
@@ -81,6 +81,14 @@ class Media(MediaBase):
     id: Optional[int] = None
     created_at: Optional[datetime] = None
     torrents: List[Torrent] = []
+
+    @field_validator('created_at', mode='before')
+    @classmethod
+    def make_created_at_aware(cls, v):
+        if isinstance(v, datetime) and v.tzinfo is None:
+            # Assume the naive datetime from DB is UTC
+            return v.replace(tzinfo=timezone.utc)
+        return v
 
     class Config:
         from_attributes = True
