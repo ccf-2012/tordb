@@ -299,7 +299,7 @@ class TMDbSearcher:
         searches = []
         if torinfo.season:
             torinfo.id_score += 5
-            searches = [('tv', cntitle), ('tv', extitle), ('tv', cuttitle), ('multi', cntitle)]
+            searches = [('tv', extitle), ('tv', cntitle), ('tv', cuttitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
             torinfo.id_score += 5
             searches = [('tv', extitle), ('multi', cuttitle), ('multi', cntitle)]
