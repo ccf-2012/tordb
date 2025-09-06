@@ -299,14 +299,14 @@ class TMDbSearcher:
         searches = []
         if torinfo.season:
             torinfo.id_score += 5
-            searches = [('tv', cntitle), ('tv', cuttitle), ('multi', extitle), ('multi', cntitle)]
+            searches = [('tv', cntitle), ('tv', extitle), ('tv', cuttitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
             torinfo.id_score += 5
-            searches = [('tv', cntitle), ('multi', cuttitle), ('multi', extitle)]
+            searches = [('tv', extitle), ('multi', cuttitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'movie':
-            searches = [('movie', cntitle),  ('movie', cuttitle), ('movie', extitle), ('multi', cuttitle), ('multi', cntitle)]
+            searches = [('movie', extitle),  ('movie', cuttitle), ('movie', cntitle), ('multi', cuttitle), ('multi', cntitle)]
         else:
-            searches = [('multi', cntitle), ('multi', cuttitle), ('multi', extitle), ('tv', cuttitle), ('movie', cuttitle)]
+            searches = [('multi', extitle), ('multi', cntitle), ('multi', cuttitle), ('tv', cuttitle), ('movie', cuttitle)]
 
         # 过滤掉搜索关键字为空的条目，并移除重复的条目
         unique_list = list(dict.fromkeys(item for item in searches if item[1]))
