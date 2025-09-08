@@ -1,23 +1,23 @@
 import configparser
+import os
 from pathlib import Path
-import shutil
 import sys
 
-# A simple object to hold the settings, mimicking the previous structure
+# A simple object to hold the settings
 class Settings:
     def __init__(self, parser):
-        # TMDB
-        self.tmdb_api_key = parser.get("tmdb", "api_key", fallback=None)
-        if not self.tmdb_api_key or self.tmdb_api_key == 'your_api_key_here':
-            raise ValueError("API key not found or not set in [tmdb] section of config.ini")
+        # TMDB (Prioritize environment variable)
+        self.tmdb_api_key = os.getenv('TORDB_TMDB_API_KEY') or parser.get("tmdb", "api_key", fallback=None)
+        if not self.tmdb_api_key or 'your_api_key' in self.tmdb_api_key:
+            raise ValueError("TMDb API key is missing or invalid. Please set the TORDB_TMDB_API_KEY environment variable.")
 
-        # Database
-        self.db_type = parser.get("database", "type", fallback="sqlite")
-        self.db_host = parser.get("database", "host", fallback="localhost")
-        self.db_port = parser.getint("database", "port", fallback=3306)
-        self.db_user = parser.get("database", "user", fallback="user")
-        self.db_password = parser.get("database", "password", fallback="password")
-        self.db_name = parser.get("database", "dbname", fallback="tordb")
+        # Database (Prioritize environment variables)
+        self.db_type = os.getenv('DB_TYPE', parser.get("database", "type", fallback="mysql"))
+        self.db_host = os.getenv('MYSQL_HOST', parser.get("database", "host", fallback="mysql"))
+        self.db_port = int(os.getenv('MYSQL_PORT', parser.getint("database", "port", fallback=3306)))
+        self.db_user = os.getenv('MYSQL_USER', parser.get("database", "user", fallback="root"))
+        self.db_password = os.getenv('MYSQL_ROOT_PASSWORD', parser.get("database", "password", fallback=""))
+        self.db_name = os.getenv('MYSQL_DATABASE', parser.get("database", "dbname", fallback="tordb"))
 
     def get_database_url(self):
         if self.db_type == "mysql":
@@ -25,40 +25,21 @@ class Settings:
         else: # Default to sqlite
             return "sqlite:///./tmdb_media.db"
 
-
-
 # --- Main Configuration Loading Logic ---
 
-# Path to the config.ini file, expected to be in the `backend` directory
-config_file_path = Path(__file__).parent.parent / "config.ini"
-example_config_path = Path(__file__).parent.parent / "config.ini.example"
-
-if not config_file_path.is_file():
-    if example_config_path.is_file():
-        print(f"INFO: Configuration file 'config.ini' not found.", file=sys.stderr)
-        print(f"INFO: Creating 'config.ini' from 'config.ini.example'.", file=sys.stderr)
-        try:
-            shutil.copy(example_config_path, config_file_path)
-            print(f"SUCCESS: Created '{config_file_path}'.", file=sys.stderr)
-        except Exception as e:
-            print(f"ERROR: Could not create config file: {e}", file=sys.stderr)
-            sys.exit(1)
-        
-        print("\nACTION REQUIRED: Please edit 'backend/config.ini' and add your TMDb API key before running the application again.", file=sys.stderr)
-        sys.exit(1) # Exit after creating the file to allow user to add API key.
-    else:
-        # If both config and example are missing, we cannot proceed.
-        raise FileNotFoundError(
-            f"Configuration file 'config.ini' not found, and no 'config.ini.example' was found to create it from."
-        )
-
 config_parser = configparser.ConfigParser()
-config_parser.read(config_file_path)
+
+# The config.ini file is optional. If it exists, it will be used as a fallback for environment variables.
+config_file_path = Path(__file__).parent.parent / "config.ini"
+if config_file_path.is_file():
+    print(f"INFO: Loading configuration from '{config_file_path}'", file=sys.stderr)
+    config_parser.read(config_file_path)
+else:
+    print("INFO: 'config.ini' not found. Relying on environment variables.", file=sys.stderr)
 
 try:
     # Create a single, importable instance of the settings
     settings = Settings(config_parser)
 except ValueError as e:
-    print(f"ERROR: {e}", file=sys.stderr)
-    print(f"ACTION REQUIRED: Please make sure your API key is correctly set in '{config_file_path}'.", file=sys.stderr)
+    print(f"ERROR: Configuration error: {e}", file=sys.stderr)
     sys.exit(1)
