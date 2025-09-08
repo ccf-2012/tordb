@@ -10,3 +10,4 @@ tortitle
 pytest-mock
 PyMySQL
 cryptography
+python-dotenv
