@@ -6,9 +6,26 @@ import sys
 # A simple object to hold the settings, mimicking the previous structure
 class Settings:
     def __init__(self, parser):
+        # TMDB
         self.tmdb_api_key = parser.get("tmdb", "api_key", fallback=None)
         if not self.tmdb_api_key or self.tmdb_api_key == 'your_api_key_here':
             raise ValueError("API key not found or not set in [tmdb] section of config.ini")
+
+        # Database
+        self.db_type = parser.get("database", "type", fallback="sqlite")
+        self.db_host = parser.get("database", "host", fallback="localhost")
+        self.db_port = parser.getint("database", "port", fallback=3306)
+        self.db_user = parser.get("database", "user", fallback="user")
+        self.db_password = parser.get("database", "password", fallback="password")
+        self.db_name = parser.get("database", "dbname", fallback="tordb")
+
+    def get_database_url(self):
+        if self.db_type == "mysql":
+            return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
+        else: # Default to sqlite
+            return "sqlite:///./tmdb_media.db"
+
+
 
 # --- Main Configuration Loading Logic ---
 

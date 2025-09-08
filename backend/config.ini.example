@@ -1,2 +1,11 @@
 [tmdb]
 api_key = your_api_key_here
+
+[database]
+# Database type: sqlite or mysql
+type = sqlite
+host = localhost
+port = 3306
+user = user
+password = password
+dbname = tordb

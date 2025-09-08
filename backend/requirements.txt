@@ -6,6 +6,7 @@ pydantic-settings
 tmdbv3api
 Cinemagoer
 loguru
-tmdbv3api
 tortitle
 pytest-mock
+PyMySQL
+cryptography
