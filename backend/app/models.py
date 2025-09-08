@@ -15,8 +15,8 @@ else:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-class Media(Base):
-    __tablename__ = "media"
+class TdbMedia(Base):
+    __tablename__ = "tdb_media"
 
     id = Column(Integer, primary_key=True, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
@@ -41,18 +41,18 @@ class Media(Base):
     id_score = Column(Integer, nullable=True)
     seasons = Column(JSON, nullable=True)
 
-    torrents = relationship("Torrent", back_populates="media", cascade="all, delete-orphan")
+    torrents = relationship("TdbTorrent", back_populates="tdb_media", cascade="all, delete-orphan")
 
-class Torrent(Base):
-    __tablename__ = "torrents"
+class TdbTorrent(Base):
+    __tablename__ = "tdb_torrents"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(512), nullable=False)
     infolink = Column(String(255), nullable=True)
     subtitle = Column(String(200), nullable=True)
-    media_id = Column(Integer, ForeignKey("media.id"), nullable=False)
+    media_id = Column(Integer, ForeignKey("tdb_media.id"), nullable=False)
 
-    media = relationship("Media", back_populates="torrents")
+    tdb_media = relationship("TdbMedia", back_populates="torrents")
 
 def create_db_and_tables():
     Base.metadata.create_all(bind=engine)

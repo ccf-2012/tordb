@@ -39,7 +39,7 @@ def parse_tmdb_str(tmdb_str: str):
     parts = tmdb_str.split('-')
     return parts[0], parts[1] if len(parts) > 1 else None
 
-@app.post("/api/query", response_model=schemas.Media)
+@app.post("/api/query", response_model=schemas.TdbMedia)
 def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get_db)):
     """
     This endpoint mirrors the logic of the original Flask query, accepting a JSON body.
@@ -68,12 +68,12 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
     
     raise HTTPException(status_code=404, detail=f"Could not find or create a media match for \"{query.torname}\"")
 
-# --- Standard CRUD for Media ---
-@app.post("/api/media/", response_model=schemas.Media)
-def create_media(media: schemas.MediaCreate, db: Session = Depends(get_db)):
+# --- Standard CRUD for TdbMedia ---
+@app.post("/api/tdb_media/", response_model=schemas.TdbMedia)
+def create_media(media: schemas.TdbMediaCreate, db: Session = Depends(get_db)):
     return crud.create_media(db=db, media=media)
 
-@app.post("/api/media/from-tmdb/", response_model=schemas.Media)
+@app.post("/api/tdb_media/from-tmdb/", response_model=schemas.TdbMedia)
 def create_media_from_tmdb(
     torname_regex: str,
     clean_title: str,
@@ -101,7 +101,7 @@ def create_media_from_tmdb(
         tmdb_genres = format_genres(n1)
         tmdb_overview = n1.overview
 
-        media_create = schemas.MediaCreate(
+        media_create = schemas.TdbMediaCreate(
             clean_title=clean_title,
             torname_regex=torname_regex,
             tmdb_id=tmdb_id,
@@ -117,7 +117,7 @@ def create_media_from_tmdb(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create media from TMDb: {e}")
 
-@app.get("/api/media/search", response_model=schemas.MediaPage)
+@app.get("/api/tdb_media/search", response_model=schemas.TdbMediaPage)
 def search_media_endpoint(q: str, db: Session = Depends(get_db)):
     """
     Searches for media items by a query string, matching against tmdb_title and clean_title.
@@ -127,25 +127,25 @@ def search_media_endpoint(q: str, db: Session = Depends(get_db)):
         return crud.get_all_media(db, skip=0, limit=10) # Adjust limit as needed
     return crud.search_media(db, q=q)
 
-@app.get("/api/media/", response_model=schemas.MediaPage)
+@app.get("/api/tdb_media/", response_model=schemas.TdbMediaPage)
 def read_all_media(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     return crud.get_all_media(db, skip=skip, limit=limit)
 
-@app.get("/api/media/{media_id}", response_model=schemas.Media)
+@app.get("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
 def read_media(media_id: int, db: Session = Depends(get_db)):
     db_media = crud.get_media(db, media_id=media_id)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     return db_media
 
-@app.put("/api/media/{media_id}", response_model=schemas.Media)
-def update_media(media_id: int, media: schemas.MediaUpdate, db: Session = Depends(get_db)):
+@app.put("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
+def update_media(media_id: int, media: schemas.TdbMediaUpdate, db: Session = Depends(get_db)):
     db_media = crud.update_media(db, media_id, media)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     return db_media
 
-@app.delete("/api/media/{media_id}", response_model=schemas.Media)
+@app.delete("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
 def delete_media(media_id: int, db: Session = Depends(get_db)):
     db_media = crud.delete_media(db, media_id)
     if db_media is None:
@@ -186,19 +186,24 @@ def get_tmdb_details(tmdb_id: int, tmdb_cat: str):
 
     return tmdb_details_dict
 
-# --- Standard CRUD for Torrents ---
-@app.post("/api/torrents/", response_model=schemas.Torrent)
-def create_torrent_for_media(media_id: int, torrent: schemas.TorrentCreate, db: Session = Depends(get_db)):
+# --- Standard CRUD for TdbTorrents ---
+@app.post("/api/tdb_torrents/", response_model=schemas.TdbTorrent)
+def create_torrent_for_media(media_id: int, torrent: schemas.TdbTorrentCreate, db: Session = Depends(get_db)):
     db_media = crud.get_media(db, media_id=media_id)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
-    return crud.create_torrent(db=db, torrent=torrent, media_id=media_id)
+    
+    torinfo = TorrentInfo()
+    torinfo.torname = torrent.name
+    torinfo.infolink = torrent.infolink
+    
+    return crud.create_torrent(db=db, torinfo=torinfo, media_id=media_id)
 
-@app.delete("/api/torrents/{torrent_id}", response_model=schemas.Torrent)
+@app.delete("/api/tdb_torrents/{torrent_id}", response_model=schemas.TdbTorrent)
 def delete_torrent(torrent_id: int, db: Session = Depends(get_db)):
     db_torrent = crud.delete_torrent(db, torrent_id)
     if db_torrent is None:
-        raise HTTPException(status_code=404, detail="Torrent not found")
+        raise HTTPException(status_code=404, detail="TdbTorrent not found")
     return db_torrent
 
 class SPAStaticFiles(StaticFiles):

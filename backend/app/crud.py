@@ -9,7 +9,7 @@ from app.utils import format_genres
 # --- Read Operations ---
 
 def get_media(db: Session, media_id: int):
-    return db.query(models.Media).filter(models.Media.id == media_id).first()
+    return db.query(models.TdbMedia).filter(models.TdbMedia.id == media_id).first()
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -17,10 +17,10 @@ from . import models, schemas
 
 def get_all_media(db: Session, skip: int = 0, limit: int = 100):
     # Query for paginated media items, sorted by creation date
-    items = db.query(models.Media).order_by(models.Media.created_at.desc()).offset(skip).limit(limit).all()
+    items = db.query(models.TdbMedia).order_by(models.TdbMedia.created_at.desc()).offset(skip).limit(limit).all()
     
     # Get the total count of all media items for pagination
-    total = db.query(func.count(models.Media.id)).scalar()
+    total = db.query(func.count(models.TdbMedia.id)).scalar()
     
     return {"items": items, "total": total}
 
@@ -28,10 +28,10 @@ def search_media(db: Session, q: str):
     search_query = f"%{q}%"
     
     # Query for media items matching the search query in either tmdb_title or clean_title
-    media_items = db.query(models.Media).filter(
+    media_items = db.query(models.TdbMedia).filter(
         or_(
-            models.Media.tmdb_title.ilike(search_query),
-            models.Media.clean_title.ilike(search_query)
+            models.TdbMedia.tmdb_title.ilike(search_query),
+            models.TdbMedia.clean_title.ilike(search_query)
         )
     ).all()
     
@@ -43,12 +43,12 @@ def search_media(db: Session, q: str):
     
     return {"items": media_items, "total": total_results}
 
-def find_torrent_by_name(db: Session, name: str) -> models.Torrent | None:
-    return db.query(models.Torrent).filter(models.Torrent.name == name).first()
+def find_torrent_by_name(db: Session, name: str) -> models.TdbTorrent | None:
+    return db.query(models.TdbTorrent).filter(models.TdbTorrent.name == name).first()
 
-def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | None:
+def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.TdbMedia | None:
     # TODO: 这里要求传入的torinfo.clean_title 等于数据库中的值，但是有时是非常像，只有一个空格符号没对上就不会匹配
-    candidates = db.query(models.Media).filter(models.Media.clean_title == torinfo.clean_title).all()
+    candidates = db.query(models.TdbMedia).filter(models.TdbMedia.clean_title == torinfo.clean_title).all()
     if not candidates:
         return None
 
@@ -85,10 +85,10 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | N
     logger.info(f"Fallback: Found media by clean_title: {candidates[0].tmdb_title}")
     return candidates[0]
 
-def find_media_by_torname_regex(db: Session, title: str, clean_title: str) -> models.Media | None:
-    all_media_with_regex = db.query(models.Media).filter(
-        models.Media.torname_regex != None,
-        # models.Media.clean_title.like(f"%{clean_title}%") # 加上后只能查到 clean_title 比库里的短的
+def find_media_by_torname_regex(db: Session, title: str, clean_title: str) -> models.TdbMedia | None:
+    all_media_with_regex = db.query(models.TdbMedia).filter(
+        models.TdbMedia.torname_regex != None,
+        # models.TdbMedia.clean_title.like(f"%{clean_title}%") # 加上后只能查到 clean_title 比库里的短的
     ).all()
     for media in all_media_with_regex:
         try:
@@ -99,36 +99,35 @@ def find_media_by_torname_regex(db: Session, title: str, clean_title: str) -> mo
             continue
     return None
 
-def find_media_by_tmdb_id(db: Session, tmdb_cat: str, tmdb_id: int) -> models.Media | None:
-    return db.query(models.Media).filter(models.Media.tmdb_cat == tmdb_cat, models.Media.tmdb_id == tmdb_id).first()
+def find_media_by_tmdb_id(db: Session, tmdb_cat: str, tmdb_id: int) -> models.TdbMedia | None:
+    return db.query(models.TdbMedia).filter(models.TdbMedia.tmdb_cat == tmdb_cat, models.TdbMedia.tmdb_id == tmdb_id).first()
 
-def find_media_by_imdb_id(db: Session, imdb_id: str) -> models.Media | None:
-    return db.query(models.Media).filter(models.Media.imdb_id == imdb_id).first()
+def find_media_by_imdb_id(db: Session, imdb_id: str) -> models.TdbMedia | None:
+    return db.query(models.TdbMedia).filter(models.TdbMedia.imdb_id == imdb_id).first()
 
 
 # --- Create Operations ---
 
-def create_media(db: Session, media: schemas.MediaCreate) -> models.Media:
+def create_media(db: Session, media: schemas.TdbMediaCreate) -> models.TdbMedia:
     # logger.debug(f"Creating media with data: {media.model_dump_json(indent=2)}")
     if not media.tmdb_id:
         # Find the minimum tmdb_id that is less than 0
-        min_id = db.query(func.min(models.Media.tmdb_id)).filter(models.Media.tmdb_id < 0).scalar()
+        min_id = db.query(func.min(models.TdbMedia.tmdb_id)).filter(models.TdbMedia.tmdb_id < 0).scalar()
         if min_id is None:
             media.tmdb_id = -1
         else:
             media.tmdb_id = min_id - 1
 
-    db_media = models.Media(**media.model_dump())
+    db_media = models.TdbMedia(**media.model_dump())
     db.add(db_media)
     db.commit()
     db.refresh(db_media)
     return db_media
 
-
-def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.MediaCreate:
-    """Helper function to create a MediaCreate schema from a TorrentInfo object."""
+def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.TdbMediaCreate:
+    """Helper function to create a TdbMediaCreate schema from a TorrentInfo object."""
     tmdb_genres = format_genres(torinfo)
-    return schemas.MediaCreate(
+    return schemas.TdbMediaCreate(
         clean_title=torinfo.clean_title,
         cntitle=torinfo.cntitle,
         tmdb_id=torinfo.tmdb_id,
@@ -148,14 +147,14 @@ def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.MediaCrea
         seasons=torinfo.seasons,
     )
 
-def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media:
+def create_media_from_torinfo(db: Session, torinfo: TorrentInfo) -> models.TdbMedia:
     """Creates a media item from a TorrentInfo object and saves it to the database."""
     media_create = _create_media_schema_from_torinfo(torinfo)
     return create_media(db, media_create)
 
-def create_torrent(db: Session, torinfo: TorrentInfo, media_id: int) -> models.Torrent:
-    torrent_create = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
-    db_torrent = models.Torrent(**torrent_create.model_dump(), media_id=media_id)
+def create_torrent(db: Session, torinfo: TorrentInfo, media_id: int) -> models.TdbTorrent:
+    torrent_create = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
+    db_torrent = models.TdbTorrent(**torrent_create.model_dump(), media_id=media_id)
     db.add(db_torrent)
     db.commit()
     db.refresh(db_torrent)
@@ -163,7 +162,7 @@ def create_torrent(db: Session, torinfo: TorrentInfo, media_id: int) -> models.T
 
 # --- Update Operations ---
 
-def update_media(db: Session, media_id: int, media_update: schemas.MediaUpdate) -> models.Media | None:
+def update_media(db: Session, media_id: int, media_update: schemas.TdbMediaUpdate) -> models.TdbMedia | None:
     db_media = get_media(db, media_id)
     if db_media:
         for key, value in media_update.model_dump(exclude_unset=True).items():
@@ -174,15 +173,15 @@ def update_media(db: Session, media_id: int, media_update: schemas.MediaUpdate) 
 
 # --- Delete Operations ---
 
-def delete_media(db: Session, media_id: int) -> models.Media | None:
+def delete_media(db: Session, media_id: int) -> models.TdbMedia | None:
     db_media = get_media(db, media_id)
     if db_media:
         db.delete(db_media)
         db.commit()
     return db_media
 
-def delete_torrent(db: Session, torrent_id: int) -> models.Torrent | None:
-    db_torrent = db.query(models.Torrent).filter(models.Torrent.id == torrent_id).first()
+def delete_torrent(db: Session, torrent_id: int) -> models.TdbTorrent | None:
+    db_torrent = db.query(models.TdbTorrent).filter(models.TdbTorrent.id == torrent_id).first()
     if db_torrent:
         db.delete(db_torrent)
         db.commit()
@@ -190,11 +189,11 @@ def delete_torrent(db: Session, torrent_id: int) -> models.Torrent | None:
 
 # --- Main Search Logic ---
 
-def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.Media | schemas.Media | None:
+def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.TdbMedia | schemas.TdbMedia | None:
     # 1. Exact torrent name match
     if torrent := find_torrent_by_name(db, torinfo.torname):
         logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
-        return torrent.media
+        return torrent.tdb_media
 
     # 2. TMDb ID provided
     if torinfo.tmdb_id and torinfo.tmdb_cat:
@@ -263,13 +262,13 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
             # Manually create the Pydantic schema object to avoid SQLAlchemy conversion issues
             media_data = _create_media_schema_from_torinfo(torinfo)
-            torrent_data = schemas.TorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
+            torrent_data = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
 
-            # Create a full Media schema object from the data
-            response_media = schemas.Media(**media_data.model_dump())
+            # Create a full TdbMedia schema object from the data
+            response_media = schemas.TdbMedia(**media_data.model_dump())
             
-            # Create the Torrent schema object and add it to the list
-            response_media.torrents.append(schemas.Torrent(**torrent_data.model_dump()))
+            # Create the TdbTorrent schema object and add it to the list
+            response_media.torrents.append(schemas.TdbTorrent(**torrent_data.model_dump()))
 
             # The function's return type is now updated to reflect this possibility
             return response_media

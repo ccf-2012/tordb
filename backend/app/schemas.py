@@ -12,25 +12,25 @@ class Query(BaseModel):
     tmdbstr: Optional[str] = None
     infolink: Optional[str] = None
 
-# --- Torrent Schemas ---
+# --- TdbTorrent Schemas ---
 
-class TorrentBase(BaseModel):
+class TdbTorrentBase(BaseModel):
     name: str
     infolink: Optional[str] = None
 
-class TorrentCreate(TorrentBase):
+class TdbTorrentCreate(TdbTorrentBase):
     pass
 
-class Torrent(TorrentBase):
+class TdbTorrent(TdbTorrentBase):
     id: Optional[int] = None
     media_id: Optional[int] = None
 
     class Config:
         from_attributes = True
 
-# --- Media Schemas ---
+# --- TdbMedia Schemas ---
 
-class MediaBase(BaseModel):
+class TdbMediaBase(BaseModel):
     torname_regex: Optional[str] = None
     clean_title: str
     cntitle: Optional[str] = None
@@ -52,10 +52,10 @@ class MediaBase(BaseModel):
     id_score: Optional[int] = None
     seasons: Optional[List[dict]] = None
 
-class MediaCreate(MediaBase):
+class TdbMediaCreate(TdbMediaBase):
     pass
 
-class MediaUpdate(BaseModel):
+class TdbMediaUpdate(BaseModel):
     torname_regex: Optional[str] = None
     clean_title: Optional[str] = None
     cntitle: Optional[str] = None
@@ -77,10 +77,10 @@ class MediaUpdate(BaseModel):
     id_score: Optional[int] = None
 
 
-class Media(MediaBase):
+class TdbMedia(TdbMediaBase):
     id: Optional[int] = None
     created_at: Optional[datetime] = None
-    torrents: List[Torrent] = []
+    torrents: List[TdbTorrent] = []
 
     @field_validator('created_at', mode='before')
     @classmethod
@@ -93,6 +93,6 @@ class Media(MediaBase):
     class Config:
         from_attributes = True
 
-class MediaPage(BaseModel):
-    items: List[Media]
+class TdbMediaPage(BaseModel):
+    items: List[TdbMedia]
     total: int
