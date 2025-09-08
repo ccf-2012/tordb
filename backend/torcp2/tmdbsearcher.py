@@ -95,7 +95,9 @@ class TMDbSearcher:
         else: # movie or other
             torinfo.tmdb_title = getattr(result, 'title', getattr(result, 'original_title', ''))
             date_attr = 'release_date'
-        torinfo.clean_title = torinfo.tmdb_title
+        # if not torinfo.clean_title:
+        #     torinfo.clean_title = torinfo.tmdb_title
+        torinfo.cntitle = torinfo.tmdb_title
 
         if hasattr(result, 'original_language'):
             torinfo.original_language = 'cn' if result.original_language == 'zh' else result.original_language
