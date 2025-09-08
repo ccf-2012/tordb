@@ -47,8 +47,23 @@ def find_torrent_by_name(db: Session, name: str) -> models.Torrent | None:
     return db.query(models.Torrent).filter(models.Torrent.name == name).first()
 
 def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.Media | None:
-    # TODO: 这里要求传入的torinfo.clean_title 等于数据库中的值，但是有时是非常像，只有一个空格符号没对上就不会匹配
-    candidates = db.query(models.Media).filter(models.Media.clean_title == torinfo.clean_title).all()
+    # 1. Aggregate all potential titles from torinfo
+    search_titles = {torinfo.clean_title, torinfo.cntitle, torinfo.extitle}
+    # Filter out None or empty strings
+    search_titles = {title for title in search_titles if title}
+
+    if not search_titles:
+        return None
+
+    # 2. Query the database using the aggregated titles
+    # Find media where clean_title OR cntitle is in our set of search_titles
+    candidates = db.query(models.Media).filter(
+        or_(
+            models.Media.clean_title.in_(search_titles),
+            models.Media.cntitle.in_(search_titles)
+        )
+    ).all()
+
     if not candidates:
         return None
 
