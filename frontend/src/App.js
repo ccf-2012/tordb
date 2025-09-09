@@ -105,7 +105,7 @@ function App() {
     const skip = (page - 1) * ITEMS_PER_PAGE;
     axios.get(`/api/media/?skip=${skip}&limit=${ITEMS_PER_PAGE}`)
       .then(response => {
-        setMediaList(response.data.items);
+        setMediaList(response.data.items || []);
         setTotalItems(response.data.total);
         setLoading(false);
       })
@@ -134,7 +134,7 @@ function App() {
     }
     axios.get(`/api/media/search?q=${dbSearchQuery}`)
       .then(response => {
-        setMediaList(response.data.items);
+        setMediaList(response.data.items || []);
         setTotalItems(response.data.total);
         // Reset to page 1 for search results
         setCurrentPage(1); 
