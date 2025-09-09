@@ -206,6 +206,14 @@ def delete_torrent(torrent_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="TdbTorrent not found")
     return db_torrent
 
+# Path for frontend build directory can be configured via an environment variable.
+# This allows for flexibility in both Docker and local development environments.
+frontend_build_dir = os.environ.get("FRONTEND_BUILD_DIR")
+
+if not frontend_build_dir:
+    # Fallback for local development: path relative to this file
+    frontend_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'build'))
+
 class SPAStaticFiles(StaticFiles):
     async def get_response(self, path: str, scope):
         try:
@@ -216,6 +224,5 @@ class SPAStaticFiles(StaticFiles):
             else:
                 raise ex
 
-frontend_build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend', 'build'))
 if os.path.exists(frontend_build_dir):
     app.mount("/", SPAStaticFiles(directory=frontend_build_dir, html=True), name="spa")

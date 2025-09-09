@@ -7,7 +7,7 @@ COPY frontend/package*.json ./
 RUN npm install
 
 # Copy the rest of the frontend code and build
-COPY frontend/ ./
+COPY frontend/ .
 # Create React App builds to a 'build' folder by default
 RUN npm run build
 
@@ -15,17 +15,21 @@ RUN npm run build
 FROM python:3.13-slim
 WORKDIR /app
 
-# Install Python dependencies
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install netcat for health checks
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
 
-# Copy backend code
-COPY backend/ .
+# Copy the entire tordb directory
+COPY . .
+
+# Install Python dependencies from the backend directory
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+# Make the entrypoint script executable
+RUN chmod +x backend/entrypoint.sh
 
 # Copy built frontend from the builder stage
-# Assuming the backend is configured to serve files from a 'build' directory
-COPY --from=builder /app/frontend/build ./build
+COPY --from=builder /app/frontend/build ./frontend/build
 
-# Expose port and run the application
+# Expose port and set the entrypoint
 EXPOSE 6009
-CMD ["python", "run.py"]
+ENTRYPOINT ["/app/backend/entrypoint.sh"]
