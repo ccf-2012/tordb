@@ -60,7 +60,7 @@ def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.TdbMedia 
     candidates = db.query(models.TdbMedia).filter(
         or_(
             models.TdbMedia.clean_title.in_(search_titles),
-            models.Media.cntitle.in_(search_titles)
+            models.TdbMedia.cntitle.in_(search_titles)
         )
     ).all()
 
