@@ -103,7 +103,7 @@ function App() {
   const fetchMedia = (page) => {
     setLoading(true);
     const skip = (page - 1) * ITEMS_PER_PAGE;
-    axios.get(`/api/media/?skip=${skip}&limit=${ITEMS_PER_PAGE}`)
+    axios.get(`/api/tdb_media/?skip=${skip}&limit=${ITEMS_PER_PAGE}`)
       .then(response => {
         setMediaList(response.data.items || []);
         setTotalItems(response.data.total);
@@ -132,7 +132,7 @@ function App() {
       fetchMedia(1);
       return;
     }
-    axios.get(`/api/media/search?q=${dbSearchQuery}`)
+    axios.get(`/api/tdb_media/search?q=${dbSearchQuery}`)
       .then(response => {
         setMediaList(response.data.items || []);
         setTotalItems(response.data.total);
@@ -165,9 +165,9 @@ function App() {
   const handleSaveMedia = (mediaData, mode) => {
     let request;
     if (mediaData.id) { // Editing existing media
-      request = axios.put(`/api/media/${mediaData.id}`, mediaData);
+      request = axios.put(`/api/tdb_media/${mediaData.id}`, mediaData);
     } else { // Creating new media
-        request = axios.post('/api/media/', mediaData);
+        request = axios.post('/api/tdb_media/', mediaData);
     }
 
     request
@@ -182,7 +182,7 @@ function App() {
 
   const handleDeleteMedia = (mediaId) => {
     if (window.confirm('确定要删除这个媒体条目吗？')) {
-      axios.delete(`/api/media/${mediaId}`)
+      axios.delete(`/api/tdb_media/${mediaId}`)
         .then(() => fetchMedia(currentPage))
         .catch(err => {
           setError(`删除媒体失败: ${err.response?.data?.detail || err.message}`);
