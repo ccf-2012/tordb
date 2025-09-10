@@ -1,3 +1,8 @@
+[security]
+# A secret key required for all API access.
+# This can also be set via the TORDB_API_KEY environment variable.
+api_key = your_secret_api_key
+
 [tmdb]
 api_key = your_api_key_here
 

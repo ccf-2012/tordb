@@ -1,6 +1,8 @@
 import os
 import sys
-from fastapi import FastAPI, Depends, HTTPException
+import secrets
+from typing import Optional
+from fastapi import FastAPI, Depends, HTTPException, APIRouter, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -17,6 +19,19 @@ from app.config import settings
 from app.utils import format_genres
 
 app = FastAPI()
+
+# --- Security ---
+async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")):
+    # The app will fail on startup if this is not set, so this check is a safeguard.
+    if not settings.tordb_api_key:
+        raise HTTPException(status_code=500, detail="API Key not configured on server")
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="X-API-Key header is missing")
+    if not secrets.compare_digest(x_api_key, settings.tordb_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API Key")
+
+# Create a router for all API endpoints that will be protected
+api_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 # Initialize TMDbSearcher at startup using the key from config
 # pydantic will raise an error on startup if the key is missing.
@@ -39,7 +54,7 @@ def parse_tmdb_str(tmdb_str: str):
     parts = tmdb_str.split('-')
     return parts[0], parts[1] if len(parts) > 1 else None
 
-@app.post("/api/query", response_model=schemas.TdbMedia)
+@api_router.post("/query", response_model=schemas.TdbMedia)
 def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get_db)):
     """
     This endpoint mirrors the logic of the original Flask query, accepting a JSON body.
@@ -66,14 +81,14 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
         media_result.id_score = torinfo.id_score
         return media_result
     
-    raise HTTPException(status_code=404, detail=f"Could not find or create a media match for \"{query.torname}\"")
+    raise HTTPException(status_code=404, detail=f'Could not find or create a media match for "{query.torname}"')
 
 # --- Standard CRUD for TdbMedia ---
-@app.post("/api/tdb_media/", response_model=schemas.TdbMedia)
+@api_router.post("/tdb_media/", response_model=schemas.TdbMedia)
 def create_media(media: schemas.TdbMediaCreate, db: Session = Depends(get_db)):
     return crud.create_media(db=db, media=media)
 
-@app.post("/api/tdb_media/from-tmdb/", response_model=schemas.TdbMedia)
+@api_router.post("/tdb_media/from-tmdb/", response_model=schemas.TdbMedia)
 def create_media_from_tmdb(
     torname_regex: str,
     clean_title: str,
@@ -117,7 +132,7 @@ def create_media_from_tmdb(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create media from TMDb: {e}")
 
-@app.get("/api/tdb_media/search", response_model=schemas.TdbMediaPage)
+@api_router.get("/tdb_media/search", response_model=schemas.TdbMediaPage)
 def search_media_endpoint(q: str, db: Session = Depends(get_db)):
     """
     Searches for media items by a query string, matching against tmdb_title and clean_title.
@@ -127,32 +142,32 @@ def search_media_endpoint(q: str, db: Session = Depends(get_db)):
         return crud.get_all_media(db, skip=0, limit=10) # Adjust limit as needed
     return crud.search_media(db, q=q)
 
-@app.get("/api/tdb_media/", response_model=schemas.TdbMediaPage)
+@api_router.get("/tdb_media/", response_model=schemas.TdbMediaPage)
 def read_all_media(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     return crud.get_all_media(db, skip=skip, limit=limit)
 
-@app.get("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
+@api_router.get("/tdb_media/{media_id}", response_model=schemas.TdbMedia)
 def read_media(media_id: int, db: Session = Depends(get_db)):
     db_media = crud.get_media(db, media_id=media_id)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     return db_media
 
-@app.put("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
+@api_router.put("/tdb_media/{media_id}", response_model=schemas.TdbMedia)
 def update_media(media_id: int, media: schemas.TdbMediaUpdate, db: Session = Depends(get_db)):
     db_media = crud.update_media(db, media_id, media)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     return db_media
 
-@app.delete("/api/tdb_media/{media_id}", response_model=schemas.TdbMedia)
+@api_router.delete("/tdb_media/{media_id}", response_model=schemas.TdbMedia)
 def delete_media(media_id: int, db: Session = Depends(get_db)):
     db_media = crud.delete_media(db, media_id)
     if db_media is None:
         raise HTTPException(status_code=404, detail="Media not found")
     return db_media
 
-@app.get("/api/tmdb/details", response_model=dict)
+@api_router.get("/tmdb/details", response_model=dict)
 def get_tmdb_details(tmdb_id: int, tmdb_cat: str):
     n1 = TorrentInfo()
     n1.tmdb_cat = tmdb_cat
@@ -187,7 +202,7 @@ def get_tmdb_details(tmdb_id: int, tmdb_cat: str):
     return tmdb_details_dict
 
 # --- Standard CRUD for TdbTorrents ---
-@app.post("/api/tdb_torrents/", response_model=schemas.TdbTorrent)
+@api_router.post("/tdb_torrents/", response_model=schemas.TdbTorrent)
 def create_torrent_for_media(media_id: int, torrent: schemas.TdbTorrentCreate, db: Session = Depends(get_db)):
     db_media = crud.get_media(db, media_id=media_id)
     if db_media is None:
@@ -199,12 +214,14 @@ def create_torrent_for_media(media_id: int, torrent: schemas.TdbTorrentCreate, d
     
     return crud.create_torrent(db=db, torinfo=torinfo, media_id=media_id)
 
-@app.delete("/api/tdb_torrents/{torrent_id}", response_model=schemas.TdbTorrent)
+@api_router.delete("/tdb_torrents/{torrent_id}", response_model=schemas.TdbTorrent)
 def delete_torrent(torrent_id: int, db: Session = Depends(get_db)):
     db_torrent = crud.delete_torrent(db, torrent_id)
     if db_torrent is None:
         raise HTTPException(status_code=404, detail="TdbTorrent not found")
     return db_torrent
+
+app.include_router(api_router, prefix="/api")
 
 # Path for frontend build directory can be configured via an environment variable.
 # This allows for flexibility in both Docker and local development environments.

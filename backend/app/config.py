@@ -11,6 +11,11 @@ class Settings:
         if not self.tmdb_api_key or 'your_api_key' in self.tmdb_api_key:
             raise ValueError("TMDb API key is missing or invalid. Please set the TORDB_TMDB_API_KEY environment variable.")
 
+        # Security
+        self.tordb_api_key = os.getenv('TORDB_API_KEY') or parser.get("security", "api_key", fallback=None)
+        if not self.tordb_api_key:
+            raise ValueError("TORDB_API_KEY is not set. Please set it in your environment or config.ini.")
+
         # Database (Prioritize environment variables)
         self.db_type = os.getenv('DB_TYPE', parser.get("database", "type", fallback="mysql"))
         self.db_host = os.getenv('MYSQL_HOST', parser.get("database", "host", fallback="mysql"))

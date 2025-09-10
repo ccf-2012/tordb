@@ -1,10 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Button, Container, Row, Col, InputGroup, FormControl, Alert, Pagination } from 'react-bootstrap';
+import { Button, Container, Row, Col, InputGroup, FormControl, Alert, Pagination, Modal } from 'react-bootstrap';
 import { useTable, useExpanded } from 'react-table';
 import MediaModal from './components/MediaModal';
 import { useMediaQuery } from 'react-responsive';
+
+// Configure axios to automatically add the API key to headers
+axios.interceptors.request.use(config => {
+  const apiKey = localStorage.getItem('tordb-api-key');
+  if (apiKey) {
+    config.headers['X-API-Key'] = apiKey;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
 
 const ITEMS_PER_PAGE = 10;
 
@@ -88,6 +99,11 @@ function App() {
   const [error, setError] = useState(null);
   const [dbSearchQuery, setDbSearchQuery] = useState('');
 
+  // API Key State
+  const [apiKey, setApiKey] = useState(localStorage.getItem('tordb-api-key') || '');
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -100,8 +116,26 @@ function App() {
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
-  const fetchMedia = (page) => {
+  const handleAuthError = (err) => {
+    if (err.response && err.response.status === 401) {
+      localStorage.removeItem('tordb-api-key');
+      setApiKey('');
+      setError('API密钥无效或缺失，请重新输入。');
+      setShowApiKeyModal(true);
+    } else {
+      setError(`发生错误: ${err.response?.data?.detail || err.message}`);
+    }
+    setLoading(false);
+  };
+
+  const fetchMedia = useCallback((page) => {
+    if (!apiKey) {
+      setShowApiKeyModal(true);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setError(null);
     const skip = (page - 1) * ITEMS_PER_PAGE;
     axios.get(`/api/tdb_media/?skip=${skip}&limit=${ITEMS_PER_PAGE}`)
       .then(response => {
@@ -111,23 +145,24 @@ function App() {
       })
       .catch(error => {
         console.error('Error fetching media:', error);
-        setError('获取媒体数据失败。后端服务是否在运行？');
-        setLoading(false);
+        handleAuthError(error);
       });
-  };
+  }, [apiKey]);
 
   useEffect(() => {
-    // Only fetch media if there is no active database search
     if (!dbSearchQuery) {
       fetchMedia(currentPage);
     }
-  }, [currentPage, dbSearchQuery]);
+  }, [currentPage, dbSearchQuery, fetchMedia]);
 
   const handleDbSearch = () => {
+    if (!apiKey) {
+      setShowApiKeyModal(true);
+      return;
+    }
     setLoading(true);
     setError(null);
     if (!dbSearchQuery.trim()) {
-      // When search is cleared, fetch the first page of all media
       setCurrentPage(1);
       fetchMedia(1);
       return;
@@ -136,14 +171,10 @@ function App() {
       .then(response => {
         setMediaList(response.data.items || []);
         setTotalItems(response.data.total);
-        // Reset to page 1 for search results
         setCurrentPage(1); 
         setLoading(false);
       })
-      .catch(err => {
-        setError(`搜索失败: ${err.response?.data?.detail || err.message}`);
-        setLoading(false);
-      });
+      .catch(handleAuthError);
   };
 
   const handlePageChange = (pageNumber) => {
@@ -164,9 +195,9 @@ function App() {
 
   const handleSaveMedia = (mediaData, mode) => {
     let request;
-    if (mediaData.id) { // Editing existing media
+    if (mediaData.id) {
       request = axios.put(`/api/tdb_media/${mediaData.id}`, mediaData);
-    } else { // Creating new media
+    } else {
         request = axios.post('/api/tdb_media/', mediaData);
     }
 
@@ -175,18 +206,24 @@ function App() {
         handleCloseModal();
         fetchMedia(currentPage);
       })
-      .catch(err => {
-        setError(`保存媒体失败: ${err.response?.data?.detail || err.message}`);
-      });
+      .catch(handleAuthError);
   };
 
   const handleDeleteMedia = (mediaId) => {
     if (window.confirm('确定要删除这个媒体条目吗？')) {
       axios.delete(`/api/tdb_media/${mediaId}`)
         .then(() => fetchMedia(currentPage))
-        .catch(err => {
-          setError(`删除媒体失败: ${err.response?.data?.detail || err.message}`);
-        });
+        .catch(handleAuthError);
+    }
+  };
+
+  const handleSaveApiKey = () => {
+    if (tempApiKey) {
+      localStorage.setItem('tordb-api-key', tempApiKey);
+      setApiKey(tempApiKey);
+      setShowApiKeyModal(false);
+      setCurrentPage(1); // Reset to page 1
+      // The useEffect will trigger a fetch
     }
   };
 
@@ -290,75 +327,96 @@ function App() {
 
   return (
     <>
-    <div style={{ padding: '1rem', borderBottom: '1px solid #dee2e6', marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
-        <img src="/logo192.png" width="40" height="40" alt="logo" style={{ marginRight: '10px' }} />
-        <h5 style={{ margin: 0 }}><a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>TORDB: Taming the torrents</a></h5>
-    </div>
-    <Container fluid style={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
-      {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
-      <Row className="mb-3">
-        <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
-          <InputGroup>
-            <FormControl
-              placeholder="搜索..."
-              value={dbSearchQuery}
-              onChange={e => setDbSearchQuery(e.target.value)}
-              onKeyPress={e => e.key === 'Enter' && handleDbSearch()}
-            />
-            <Button variant="info" onClick={handleDbSearch}>搜索</Button>
-          </InputGroup>
-        </Col>
-        <Col lg={3} md={12} xs={12} className="text-lg-end">
-            <Button variant="success" onClick={() => handleOpenModal()}>+ 手动添加</Button>
-        </Col>
-      </Row>
+      <Modal show={showApiKeyModal} onHide={() => {}} backdrop="static" keyboard={false} centered>
+        <Modal.Header>
+          <Modal.Title>请输入 API 密钥</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <FormControl
+            placeholder="API Key"
+            aria-label="API Key"
+            onChange={(e) => setTempApiKey(e.target.value)}
+            onKeyPress={e => e.key === 'Enter' && handleSaveApiKey()}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleSaveApiKey}>保存</Button>
+        </Modal.Footer>
+      </Modal>
 
-      {loading ? (
-        <div>加载中...</div>
-      ) : (
-        <>
-          <Table columns={columns} data={mediaList} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
-          {totalPages > 0 && (
-            <Row className="justify-content-center align-items-center mt-3">
-              <Col xs="auto" className="text-muted small me-3 d-none d-md-block">
-                第 {currentPage} 页 / 共 {totalPages} 页 (总计: {totalItems})
-              </Col>
-              <Col xs="auto">
-                <Pagination size={isMobile ? 'sm' : undefined}>
-                  <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1} />
-                  <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
+      <div style={{ padding: '1rem', borderBottom: '1px solid #dee2e6', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{display: 'flex', alignItems: 'center'}}>
+            <img src="/logo192.png" width="40" height="40" alt="logo" style={{ marginRight: '10px' }} />
+            <h5 style={{ margin: 0 }}><a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>TORDB: Taming the torrents</a></h5>
+        </div>
+        <Button variant="outline-secondary" size="sm" onClick={() => setShowApiKeyModal(true)}>更换密钥</Button>
+      </div>
 
-                  {/* Render page numbers */}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
-                    if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
-                      return (
-                        <Pagination.Item key={page} active={page === currentPage} onClick={() => handlePageChange(page)}>
-                          {page}
-                        </Pagination.Item>
-                      );
-                    } else if (page === currentPage - 3 || page === currentPage + 3) {
-                      return <Pagination.Ellipsis key={page} />;
-                    }
-                    return null;
-                  })}
+      <Container fluid style={{ fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
+        {error && <Alert variant="danger" onClose={() => setError(null)} dismissible>{error}</Alert>}
+        <Row className="mb-3">
+          <Col lg={4} md={6} xs={12} className="mb-2 mb-md-0">
+            <InputGroup>
+              <FormControl
+                placeholder="搜索..."
+                value={dbSearchQuery}
+                onChange={e => setDbSearchQuery(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && handleDbSearch()}
+              />
+              <Button variant="info" onClick={handleDbSearch}>搜索</Button>
+            </InputGroup>
+          </Col>
+          <Col lg={3} md={12} xs={12} className="text-lg-end">
+              <Button variant="success" onClick={() => handleOpenModal()}>+ 手动添加</Button>
+          </Col>
+        </Row>
 
-                  <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} />
-                  <Pagination.Last onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages} />
-                </Pagination>
-              </Col>
-            </Row>
-          )}
-        </>
-      )}
+        {loading ? (
+          <div>加载中...</div>
+        ) : (
+          <>
+            <Table columns={columns} data={mediaList} onEdit={handleOpenModal} onDelete={handleDeleteMedia} />
+            {totalPages > 0 && (
+              <Row className="justify-content-center align-items-center mt-3">
+                <Col xs="auto" className="text-muted small me-3 d-none d-md-block">
+                  第 {currentPage} 页 / 共 {totalPages} 页 (总计: {totalItems})
+                </Col>
+                <Col xs="auto">
+                  <Pagination size={isMobile ? 'sm' : undefined}>
+                    <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1} />
+                    <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
 
-      {showModal && (
-        <MediaModal
-          media={selectedMedia}
-          onSave={handleSaveMedia}
-          onClose={handleCloseModal}
-        />
-      )}
-    </Container>
+                    {/* Render page numbers */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                      if (page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)) {
+                        return (
+                          <Pagination.Item key={page} active={page === currentPage} onClick={() => handlePageChange(page)}>
+                            {page}
+                          </Pagination.Item>
+                        );
+                      } else if (page === currentPage - 3 || page === currentPage + 3) {
+                        return <Pagination.Ellipsis key={page} />;
+                      }
+                      return null;
+                    })}
+
+                    <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} />
+                    <Pagination.Last onClick={() => handlePageChange(totalPages)} disabled={currentPage === totalPages} />
+                  </Pagination>
+                </Col>
+              </Row>
+            )}
+          </>
+        )}
+
+        {showModal && (
+          <MediaModal
+            media={selectedMedia}
+            onSave={handleSaveMedia}
+            onClose={handleCloseModal}
+          />
+        )}
+      </Container>
     </>
   );
 }
