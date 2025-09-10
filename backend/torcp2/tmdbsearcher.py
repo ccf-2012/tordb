@@ -314,9 +314,16 @@ class TMDbSearcher:
         # 过滤掉搜索关键字为空的条目，并移除重复的条目
         unique_list = list(dict.fromkeys(item for item in searches if item[1]))
 
-        if len(cntitle) < 3 and len(cuttitle) > 5:
-            # 如果cntitle太短，则优先使用cuttitle
-            return sorted(unique_list, key=lambda x: x[1] != cuttitle)
+        # 组合排序：
+        # 1. 优先搜索包含中文的标题
+        # 2. 如果cntitle太短，则优先使用cuttitle
+        short_cntitle_case = len(cntitle) < 3 and len(cuttitle) > 5
+        
+        unique_list.sort(key=lambda item: (
+            not contains_cjk(item[1]), 
+            item[1] != cuttitle if short_cntitle_case else False
+        ))
+        
         return unique_list
 
     def search_tmdb(self, torinfo):
