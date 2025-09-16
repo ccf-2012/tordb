@@ -53,6 +53,7 @@ function MediaModal({ media, onSave, onClose }) {
       setFormData({
         torname_regex: '',
         clean_title: '',
+        cntitle: '',
         tmdb_id: '',
         tmdb_cat: 'movie',
         tmdb_title: '',
@@ -121,25 +122,36 @@ function MediaModal({ media, onSave, onClose }) {
       <Modal.Body>
         <Form>
           <Form.Group className="mb-3">
+            <Form.Label>用于匹配的清理后标题</Form.Label>
+            <Form.Control 
+              type="text" 
+              name="clean_title"
+              value={formData.clean_title || ''} 
+              onChange={handleChange} 
+              placeholder='后端要求此项必填'
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>中文标题</Form.Label>
+            <Form.Control
+              type="text"
+              name="cntitle"
+              value={formData.cntitle || ''}
+              onChange={handleChange}
+              placeholder='可选的中文标题'
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
             <Form.Label>种子全名匹配的正则规则</Form.Label>
             <Form.Control 
               type="text" 
               name="torname_regex" 
               value={formData.torname_regex || ''} 
               onChange={handleChange} 
-              placeholder='例如: "My Movie .*\(2023\)"'
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>用于匹配的清理后标题</Form.Label>
-            <Form.Control 
-              type="text" 
-              name="clean_title" 
-              value={formData.clean_title || ''} 
-              onChange={handleChange} 
-              placeholder='后端要求此项必填'
-              required
+              placeholder='例如: "My Movie .*\\(2023\\)"'
             />
           </Form.Group>
 
