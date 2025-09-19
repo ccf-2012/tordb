@@ -76,9 +76,17 @@ function Table({ columns, data, onEdit, onDelete }) {
                       <div className="p-3 bg-light">
                         <h6>种子列表 {row.original.tmdb_title} <span className="text-muted small">(分数: {row.original.id_score})</span></h6>
                         <ul className="list-group">
-                          {row.original.torrents.map(t => 
-                            <li key={t.id} className="list-group-item">{t.name}</li>
-                          )}
+                          {row.original.torrents.map(t => (
+                            <li key={t.id} className="list-group-item">
+                              {t.infolink ? (
+                                <a href={t.infolink} target="_blank" rel="noopener noreferrer">
+                                  {t.name}
+                                </a>
+                              ) : (
+                                t.name
+                              )}
+                            </li>
+                          ))}
                         </ul>
                       </div>
                     </td>
@@ -233,20 +241,25 @@ function App() {
         {
           Header: '海报',
           accessor: 'tmdb_poster',
-          Cell: ({ value, row }) => (
-            <div onClick={(e) => e.stopPropagation()}>
-              { value ? 
-                <img 
-                  src={`https://image.tmdb.org/t/p/w92${value}`}
-                  alt="poster" 
-                  style={{ height: '120px', width: '80px', objectFit: 'cover', borderRadius: '5px' }} 
-                /> : 
-                <div style={{ height: '120px', width: '80px', backgroundColor: '#e9ecef', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span className="text-muted small">无海报</span>
-                </div>
-              }
-            </div>
-          ),
+          Cell: ({ value, row }) => {
+            const tmdbUrl = `https://www.themoviedb.org/${row.original.tmdb_cat}/${row.original.tmdb_id}`;
+            return (
+              <div onClick={(e) => e.stopPropagation()}>
+                { value ? 
+                  <a href={tmdbUrl} target="_blank" rel="noopener noreferrer">
+                    <img 
+                      src={`https://image.tmdb.org/t/p/w92${value}`}
+                      alt="poster" 
+                      style={{ height: '120px', width: '80px', objectFit: 'cover', borderRadius: '5px' }} 
+                    />
+                  </a> : 
+                  <div style={{ height: '120px', width: '80px', backgroundColor: '#e9ecef', borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span className="text-muted small">无海报</span>
+                  </div>
+                }
+              </div>
+            );
+          },
           width: 92,
           minWidth: 92,
         },
