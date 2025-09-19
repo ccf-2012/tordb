@@ -205,12 +205,7 @@ def delete_torrent(db: Session, torrent_id: int) -> models.TdbTorrent | None:
 # --- Main Search Logic ---
 
 def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.TdbMedia | schemas.TdbMedia | None:
-    # 1. Exact torrent name match
-    if torrent := find_torrent_by_name(db, torinfo.torname):
-        logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
-        return torrent.tdb_media
-
-    # 2. TMDb ID provided
+    # 1. TMDb ID provided
     if torinfo.tmdb_id and torinfo.tmdb_cat:
         logger.info(f"INFO: TMDb ID provided: {torinfo.tmdb_cat}-{torinfo.tmdb_id}")
         if media := find_media_by_tmdb_id(db, torinfo.tmdb_cat, torinfo.tmdb_id):
@@ -224,6 +219,11 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
                 new_media = create_media_from_torinfo(db, torinfo)
                 create_torrent(db, torinfo, new_media.id)
                 return new_media
+
+    # 2. Exact torrent name match
+    if torrent := find_torrent_by_name(db, torinfo.torname):
+        logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
+        return torrent.tdb_media
 
     # 3. IMDb ID provided (for movies)
     if torinfo.imdb_id and torinfo.tmdb_cat == 'movie':
