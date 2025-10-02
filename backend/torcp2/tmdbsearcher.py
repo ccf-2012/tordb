@@ -453,7 +453,7 @@ class TMDbSearcher:
         torinfo.tmdb_vote_count = getattr(details, 'vote_count', 0)
 
         if hasattr(details, 'genres'):
-            torinfo.tmdb_genres = ','.join([g['name'] for g in details.genres])
+            torinfo.tmdb_genres = ','.join([g.name for g in details.genres])
 
         if hasattr(details, 'casts') and hasattr(details.casts, 'cast'):
             cast_data = []
