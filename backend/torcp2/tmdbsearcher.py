@@ -2,6 +2,7 @@ from tmdbv3api import TMDb, Movie, TV, Search, Find
 from imdb import Cinemagoer
 import re
 import time
+import itertools
 from loguru import logger
 
 def tryint(instr):
@@ -457,12 +458,12 @@ class TMDbSearcher:
 
         if hasattr(details, 'casts') and hasattr(details.casts, 'cast'):
             cast_data = []
-            for actor in details.casts.cast[:20]:
+            for actor in itertools.islice(details.casts.cast, 20):
                 cast_data.append({
-                    'name': actor.get('name'),
-                    'character': actor.get('character'),
-                    'profile_path': actor.get('profile_path'),
-                    'order': actor.get('order')
+                    'name': getattr(actor, 'name', ''),
+                    'character': getattr(actor, 'character', ''),
+                    'profile_path': getattr(actor, 'profile_path', ''),
+                    'order': getattr(actor, 'order', 0)
                 })
             torinfo.tmdb_casts = cast_data
 
