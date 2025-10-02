@@ -455,9 +455,9 @@ class TMDbSearcher:
         if hasattr(details, 'genres'):
             torinfo.tmdb_genres = ','.join([g['name'] for g in details.genres])
 
-        if hasattr(details, 'casts') and 'cast' in details.casts:
+        if hasattr(details, 'casts') and hasattr(details.casts, 'cast'):
             cast_data = []
-            for actor in details.casts['cast'][:20]:
+            for actor in details.casts.cast[:20]:
                 cast_data.append({
                     'name': actor.get('name'),
                     'character': actor.get('character'),
