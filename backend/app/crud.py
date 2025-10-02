@@ -4,7 +4,6 @@ from . import models, schemas
 from torcp2.torinfo import TorrentInfo
 from torcp2.tmdbsearcher import TMDbSearcher
 from loguru import logger
-from app.utils import format_genres
 
 # --- Read Operations ---
 
@@ -141,7 +140,6 @@ def create_media(db: Session, media: schemas.TdbMediaCreate) -> models.TdbMedia:
 
 def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.TdbMediaCreate:
     """Helper function to create a TdbMediaCreate schema from a TorrentInfo object."""
-    tmdb_genres = format_genres(torinfo)
     return schemas.TdbMediaCreate(
         clean_title=torinfo.clean_title,
         cntitle=torinfo.cntitle,
@@ -157,7 +155,7 @@ def _create_media_schema_from_torinfo(torinfo: TorrentInfo) -> schemas.TdbMediaC
         origin_country=torinfo.origin_country,
         original_title=torinfo.original_title,
         production_countries=torinfo.production_countries,
-        tmdb_genres=tmdb_genres,
+        tmdb_genres=torinfo.tmdb_genres, # Directly use the pre-formatted string
         id_score=torinfo.id_score,
         seasons=torinfo.seasons,
     )

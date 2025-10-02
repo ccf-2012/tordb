@@ -42,6 +42,12 @@ class TdbMediaBase(BaseModel):
     imdb_id: Optional[str] = None
     tmdb_genres: Optional[str] = None
     tmdb_overview: Optional[str] = None
+    tmdb_backdrop: Optional[str] = None
+    tmdb_runtime: Optional[int] = None
+    tmdb_popularity: Optional[float] = None
+    tmdb_vote_average: Optional[float] = None
+    tmdb_vote_count: Optional[int] = None
+    tmdb_casts: Optional[List[dict]] = None
     original_language: Optional[str] = None
     release_air_date: Optional[str] = None
     origin_country: Optional[str] = None

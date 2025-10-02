@@ -16,7 +16,6 @@ from torcp2.torinfo import TorrentParser, TorrentInfo
 from app import crud, schemas
 from app.models import SessionLocal, create_db_and_tables
 from app.config import settings
-from app.utils import format_genres
 
 app = FastAPI()
 
@@ -113,7 +112,6 @@ def create_media_from_tmdb(
         tmdb_poster = n1.poster_path
         tmdb_year = int(n1.release_air_date[:4]) if n1.release_air_date else None
 
-        tmdb_genres = format_genres(n1)
         tmdb_overview = n1.overview
 
         media_create = schemas.TdbMediaCreate(
@@ -124,7 +122,7 @@ def create_media_from_tmdb(
             tmdb_cat=tmdb_cat,
             tmdb_poster=tmdb_poster,
             tmdb_year=tmdb_year,
-            tmdb_genres=tmdb_genres,
+            tmdb_genres=n1.tmdb_genres, # Directly use the pre-formatted string
             tmdb_overview=tmdb_overview
         )
         new_media = crud.create_media(db=db, media=media_create)
