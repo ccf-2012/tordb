@@ -9,7 +9,8 @@ class Query(BaseModel):
     subtitle: Optional[str] = None
     extitle: Optional[str] = None
     imdbid: Optional[str] = None
-    tmdbstr: Optional[str] = None
+    tmdbcat: Optional[str] = None
+    tmdbid: Optional[str] = None
     infolink: Optional[str] = None
 
 # --- TdbTorrent Schemas ---
