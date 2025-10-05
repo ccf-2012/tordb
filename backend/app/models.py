@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON, Text
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, JSON, Text, Float
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, timezone
@@ -31,6 +31,12 @@ class TdbMedia(Base):
     tmdb_year = Column(Integer, nullable=True)
     tmdb_genres = Column(String(255), nullable=True)
     tmdb_overview = Column(Text, nullable=True)
+    tmdb_backdrop = Column(String(255), nullable=True)
+    tmdb_runtime = Column(Integer, nullable=True)
+    tmdb_popularity = Column(Float, nullable=True)
+    tmdb_vote_average = Column(Float, nullable=True)
+    tmdb_vote_count = Column(Integer, nullable=True)
+    tmdb_casts = Column(JSON, nullable=True)
     original_language = Column(String(32), nullable=True)
     release_air_date = Column(String(32), nullable=True)
     origin_country = Column(String(32), nullable=True)

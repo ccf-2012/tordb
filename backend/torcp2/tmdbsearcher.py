@@ -2,6 +2,7 @@ from tmdbv3api import TMDb, Movie, TV, Search, Find
 from imdb import Cinemagoer
 import re
 import time
+import itertools
 from loguru import logger
 
 def tryint(instr):
@@ -115,9 +116,6 @@ class TMDbSearcher:
         else:
             torinfo.year = 0
 
-        torinfo.genre_ids = getattr(result, 'genre_ids', [])
-        if hasattr(result, 'genres'):
-             torinfo.genre_ids = [g['id'] for g in result.genres]
         if hasattr(result, 'overview'):
             torinfo.overview = result.overview or ''
 
@@ -443,6 +441,32 @@ class TMDbSearcher:
         torinfo.tmdbDetails = details
 
         # Fill in additional details
+        torinfo.imdb_id = getattr(details, 'imdb_id', None)
+        torinfo.tmdb_backdrop = getattr(details, 'backdrop_path', '')
+        if torinfo.tmdb_cat == 'movie':
+            torinfo.tmdb_runtime = getattr(details, 'runtime', 0)
+        elif torinfo.tmdb_cat == 'tv':
+            if hasattr(details, 'episode_run_time') and details.episode_run_time:
+                torinfo.tmdb_runtime = details.episode_run_time[0]
+        
+        torinfo.tmdb_popularity = getattr(details, 'popularity', 0)
+        torinfo.tmdb_vote_average = getattr(details, 'vote_average', 0)
+        torinfo.tmdb_vote_count = getattr(details, 'vote_count', 0)
+
+        if hasattr(details, 'genres'):
+            torinfo.tmdb_genres = ','.join([g.name for g in details.genres])
+
+        if hasattr(details, 'casts') and hasattr(details.casts, 'cast'):
+            cast_data = []
+            for actor in itertools.islice(details.casts.cast, 20):
+                cast_data.append({
+                    'name': getattr(actor, 'name', ''),
+                    'character': getattr(actor, 'character', ''),
+                    'profile_path': getattr(actor, 'profile_path', ''),
+                    'order': getattr(actor, 'order', 0)
+                })
+            torinfo.tmdb_casts = cast_data
+
         if hasattr(details, 'origin_country') and details.origin_country:
             torinfo.origin_country = details.origin_country[0]
         torinfo.original_title = getattr(details, 'original_title', '')
