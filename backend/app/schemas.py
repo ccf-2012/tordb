@@ -12,6 +12,7 @@ class Query(BaseModel):
     tmdbcat: Optional[str] = None
     tmdbid: Optional[str] = None
     infolink: Optional[str] = None
+    override: Optional[bool] = False
 
 # --- TdbTorrent Schemas ---
 

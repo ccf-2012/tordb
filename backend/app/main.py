@@ -75,7 +75,7 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
         torinfo.infolink = query.infolink
 
     # Call the main search logic in crud
-    media_result = crud.search_and_create_media(db, torinfo, searcher)
+    media_result = crud.search_and_create_media(db, torinfo, searcher, query.override)
 
     if media_result:
         # Always attach the id_score from the search context to the result

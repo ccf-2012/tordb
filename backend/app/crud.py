@@ -202,7 +202,7 @@ def delete_torrent(db: Session, torrent_id: int) -> models.TdbTorrent | None:
 
 # --- Main Search Logic ---
 
-def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher) -> models.TdbMedia | schemas.TdbMedia | None:
+def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
     # 1. TMDb ID provided
     if torinfo.tmdb_id and torinfo.tmdb_cat:
         logger.info(f"INFO: TMDb ID provided: {torinfo.tmdb_cat}-{torinfo.tmdb_id}")
@@ -218,10 +218,11 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
                 create_torrent(db, torinfo, new_media.id)
                 return new_media
 
-    # 2. Exact torrent name match
-    if torrent := find_torrent_by_name(db, torinfo.torname):
-        logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
-        return torrent.tdb_media
+    if not override:
+        # 2. Exact torrent name match
+        if torrent := find_torrent_by_name(db, torinfo.torname):
+            logger.info(f"LOCAL: Found existing torrent by name: {torinfo.torname}")
+            return torrent.tdb_media
 
     # 3. IMDb ID provided (for movies)
     if torinfo.imdb_id and torinfo.tmdb_cat == 'movie':
@@ -239,23 +240,24 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
                 # TODO: 保存 clean_title 和 对应的tmdb_id/tmdb_cat, 以便后续查询可用
                 return new_media
 
-    # 4. 通过 clean_title(media_title) 进行匹配
-    if media := find_media_by_torinfo(db, torinfo):
-        # 根据 torname_regex 进行确认：stip_title 匹配上了，但是如果用户手工指定了 torname_regex 则在此进行检查
-        if media.torname_regex:
-            if not re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
-                logger.info(f"LOCAL: rejected by torname_regex: {torinfo.torname}, clean_title: {torinfo.clean_title}")
-                return None
-        logger.info(f"LOCAL: Found media by clean_title: {torinfo.clean_title}")
-        create_torrent(db, torinfo, media.id)
-        return media
-          
-    # 5. Regex match on torrent name
-    # 所有 torname_regex 是用户手工设置，对全 torname 进行匹配
-    if media := find_media_by_torname_regex(db, torinfo.torname, torinfo.clean_title):
-        logger.info(f"LOCAL: Found media by regex: {torinfo.torname}")
-        create_torrent(db, torinfo, media.id)
-        return media
+    if not override:
+        # 4. 通过 clean_title(media_title) 进行匹配
+        if media := find_media_by_torinfo(db, torinfo):
+            # 根据 torname_regex 进行确认：stip_title 匹配上了，但是如果用户手工指定了 torname_regex 则在此进行检查
+            if media.torname_regex:
+                if not re.search(media.torname_regex, torinfo.torname, re.IGNORECASE):
+                    logger.info(f"LOCAL: rejected by torname_regex: {torinfo.torname}, clean_title: {torinfo.clean_title}")
+                    return None
+            logger.info(f"LOCAL: Found media by clean_title: {torinfo.clean_title}")
+            create_torrent(db, torinfo, media.id)
+            return media
+            
+        # 5. Regex match on torrent name
+        # 所有 torname_regex 是用户手工设置，对全 torname 进行匹配
+        if media := find_media_by_torname_regex(db, torinfo.torname, torinfo.clean_title):
+            logger.info(f"LOCAL: Found media by regex: {torinfo.torname}")
+            create_torrent(db, torinfo, media.id)
+            return media
 
     # 6. Blind search on TMDb
     logger.info(f"INFO: No local match found. Performing blind search on TMDb for: {torinfo.clean_title}, {torinfo.cntitle}, {torinfo.extitle}")
