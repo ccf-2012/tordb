@@ -68,9 +68,9 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
     if query.imdbid:
         torinfo.imdb_id = query.imdbid
     if query.tmdbcat:
-        torinfo.tmdb_cat =query.tmdbcat,
+        torinfo.tmdb_cat = query.tmdbcat
     if query.tmdbid:
-        torinfo.tmdb_id = query.tmdbid,
+        torinfo.tmdb_id = query.tmdbid
     if query.infolink:
         torinfo.infolink = query.infolink
 
