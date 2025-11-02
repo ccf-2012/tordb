@@ -8,7 +8,7 @@ DATABASE_URL = settings.get_database_url()
 
 # For mysql, no need check_same_thread
 if settings.db_type == 'mysql':
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(DATABASE_URL, pool_recycle=3600)
 else:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
