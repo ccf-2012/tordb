@@ -1,6 +1,7 @@
 import os
 import sys
 import secrets
+import re
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, APIRouter, Header
 from fastapi.staticfiles import StaticFiles
@@ -83,6 +84,47 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
         return media_result
     
     raise HTTPException(status_code=404, detail=f'Could not find or create a media match for "{query.torname}"')
+
+class TmdbSearchQuery(schemas.BaseModel):
+    query: str
+
+@api_router.post("/tdb_media/search_tmdb", response_model=schemas.TdbMedia)
+def search_tmdb_and_create(search_query: TmdbSearchQuery, db: Session = Depends(get_db)):
+    """
+    Searches TMDb based on a query, which can be a keyword, torrent name, or IMDb ID.
+    - If it's a keyword, a blind search is performed.
+    - If it's a torrent-like name, it's parsed for more accurate searching.
+    - If it's an IMDb ID, it's used for a direct lookup.
+    The best match is then used to create a media entry in the database.
+    """
+    query = search_query.query
+    torinfo = None
+
+    # 1. Check if the query is an IMDb ID
+    if re.match(r'^tt\d+$', query):
+        torinfo = TorrentInfo(imdb_id=query, tmdb_cat='movie') # Assume movie for IMDb IDs
+    else:
+        # 2. Try to parse as a torrent name
+        parsed_info = TorrentParser.parse(query)
+        # If parsing yields a title, use it. Otherwise, treat as a keyword.
+        if parsed_info and parsed_info.clean_title:
+            torinfo = parsed_info
+        else:
+            # 3. Treat as a keyword
+            torinfo = TorrentInfo(clean_title=query)
+
+    if not torinfo:
+        raise HTTPException(status_code=400, detail="Invalid query provided.")
+
+    # Call the main search logic in crud
+    media_result = crud.search_and_create_media(db, torinfo, searcher, override=True)
+
+    if media_result:
+        media_result.id_score = torinfo.id_score
+        return media_result
+
+    raise HTTPException(status_code=404, detail=f'Could not find a media match on TMDb for "{query}"')
+
 
 # --- Standard CRUD for TdbMedia ---
 @api_router.post("/tdb_media/", response_model=schemas.TdbMedia)

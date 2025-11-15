@@ -106,6 +106,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dbSearchQuery, setDbSearchQuery] = useState('');
+  const [tmdbSearchQuery, setTmdbSearchQuery] = useState('');
 
   // API Key State
   const [apiKey, setApiKey] = useState(localStorage.getItem('tordb-api-key') || '');
@@ -183,6 +184,26 @@ function App() {
         setLoading(false);
       })
       .catch(handleAuthError);
+  };
+
+  const handleTmdbSearch = () => {
+    if (!tmdbSearchQuery.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    axios.post('/api/tdb_media/search_tmdb', { query: tmdbSearchQuery })
+      .then(response => {
+        setLoading(false);
+        // After search, refresh the list to show the new item
+        fetchMedia(1);
+        // Optionally, clear the search query
+        setTmdbSearchQuery('');
+      })
+      .catch(error => {
+        setLoading(false);
+        handleAuthError(error);
+      });
   };
 
   const handlePageChange = (pageNumber) => {
@@ -377,6 +398,17 @@ function App() {
                 onKeyPress={e => e.key === 'Enter' && handleDbSearch()}
               />
               <Button variant="info" onClick={handleDbSearch}>搜索</Button>
+            </InputGroup>
+          </Col>
+          <Col lg={5} md={6} xs={12} className="mb-2 mb-md-0">
+            <InputGroup>
+              <FormControl
+                placeholder="搜索TMDb，关键词/种子名/IMDb"
+                value={tmdbSearchQuery}
+                onChange={e => setTmdbSearchQuery(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && handleTmdbSearch()}
+              />
+              <Button variant="primary" onClick={handleTmdbSearch}>搜索TMDb</Button>
             </InputGroup>
           </Col>
           <Col lg={3} md={12} xs={12} className="text-lg-end">
