@@ -191,11 +191,9 @@ function App() {
     if (!tmdbSearchQuery.trim()) {
       return;
     }
-    setLoading(true);
     setError(null);
     axios.get(`/api/tmdb/search?query=${encodeURIComponent(tmdbSearchQuery)}`)
       .then(response => {
-        setLoading(false);
         if (response.data && response.data.length > 0) {
           setTmdbSearchResults(response.data);
           handleOpenModal(); // Open modal without a selected media
@@ -205,7 +203,6 @@ function App() {
         setTmdbSearchQuery('');
       })
       .catch(error => {
-        setLoading(false);
         handleAuthError(error);
       });
   };
