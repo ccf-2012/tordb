@@ -107,6 +107,7 @@ function App() {
   const [error, setError] = useState(null);
   const [dbSearchQuery, setDbSearchQuery] = useState('');
   const [tmdbSearchQuery, setTmdbSearchQuery] = useState('');
+  const [tmdbSearchResults, setTmdbSearchResults] = useState([]);
 
   // API Key State
   const [apiKey, setApiKey] = useState(localStorage.getItem('tordb-api-key') || '');
@@ -192,12 +193,15 @@ function App() {
     }
     setLoading(true);
     setError(null);
-    axios.post('/api/tdb_media/search_tmdb', { query: tmdbSearchQuery })
+    axios.get(`/api/tmdb/search?query=${encodeURIComponent(tmdbSearchQuery)}`)
       .then(response => {
         setLoading(false);
-        // After search, refresh the list to show the new item
-        fetchMedia(1);
-        // Optionally, clear the search query
+        if (response.data && response.data.length > 0) {
+          setTmdbSearchResults(response.data);
+          handleOpenModal(); // Open modal without a selected media
+        } else {
+          setError('TMDb上没有找到匹配的结果。');
+        }
         setTmdbSearchQuery('');
       })
       .catch(error => {
@@ -220,12 +224,13 @@ function App() {
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedMedia(null);
+    setTmdbSearchResults([]); // Clear results on close
   };
 
   const handleSaveMedia = (mediaData, mode) => {
     let request;
-    if (mediaData.id) {
-      request = axios.put(`/api/tdb_media/${mediaData.id}`, mediaData);
+    if (mediaData.id && mediaData.id > 0) {
+        request = axios.put(`/api/tdb_media/${mediaData.id}`, mediaData);
     } else {
         request = axios.post('/api/tdb_media/', mediaData);
     }
@@ -457,6 +462,7 @@ function App() {
         {showModal && (
           <MediaModal
             media={selectedMedia}
+            tmdbSearchResults={tmdbSearchResults}
             onSave={handleSaveMedia}
             onClose={handleCloseModal}
           />

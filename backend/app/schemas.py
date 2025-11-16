@@ -14,6 +14,18 @@ class Query(BaseModel):
     infolink: Optional[str] = None
     override: Optional[bool] = False
 
+# --- TMDb Search Result Schemas ---
+class TMDbSearchResult(BaseModel):
+    id: int
+    title: str
+    original_title: Optional[str] = None
+    year: Optional[int] = None
+    media_type: str
+    poster_path: Optional[str] = None
+    overview: Optional[str] = None
+
+
+
 # --- TdbTorrent Schemas ---
 
 class TdbTorrentBase(BaseModel):

@@ -324,6 +324,107 @@ class TMDbSearcher:
         
         return unique_list
 
+    def _format_raw_results(self, results, media_type='multi'):
+        processed_results = []
+        # Handle both list and dict from tmdbv3api
+        resultlist = results if isinstance(results, list) else results.get('results', [])
+        for result in resultlist:
+            media_cat = getattr(result, 'media_type', media_type)
+            if media_cat not in ['movie', 'tv']:
+                continue
+
+            if media_cat == 'tv':
+                title = getattr(result, 'name', getattr(result, 'original_name', ''))
+                date_attr = 'first_air_date'
+            else: # movie
+                title = getattr(result, 'title', getattr(result, 'original_title', ''))
+                date_attr = 'release_date'
+            
+            release_date = getattr(result, date_attr, '')
+            year = self._get_year_from_datestr(release_date)
+
+            processed_results.append({
+                'id': result.id,
+                'title': title,
+                'original_title': getattr(result, 'original_title', getattr(result, 'original_name', '')),
+                'year': year,
+                'media_type': media_cat,
+                'poster_path': getattr(result, 'poster_path', ''),
+                'overview': getattr(result, 'overview', ''),
+            })
+        return processed_results
+
+    def search_tmdb_list(self, torinfo):
+        title = torinfo.clean_title
+        cntitle = torinfo.cntitle
+        extitle = torinfo.extitle
+        intyear = self._fix_year(torinfo)
+        cuttitle = self._clean_title(title)
+
+        logger.debug(f"Search List ==> title: {title}, cntitle: {cntitle}, extitle: {extitle}, year:{intyear}")
+
+        search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
+        logger.debug(f"search list: {search_list}")
+        
+        all_formatted_results = []
+        processed_ids = set()
+        search = Search()
+
+        for category, term in search_list:
+            if not term:
+                continue
+            
+            try:
+                if category == 'tv':
+                    results = search.tv_shows(term=term, adult=True)
+                elif category == 'movie':
+                    results = search.movies(term=term, adult=True, year=str(intyear) if intyear else None)
+                else: # multi
+                    results = search.multi(term=term, adult=True, page=1)
+            except Exception as e:
+                logger.error(f"TMDb API search failed for '{term}': {e}")
+                continue
+
+            if not results:
+                continue
+
+            matched_results = self._find_year_match_list(results, intyear)
+
+            if matched_results:
+                # Format the results immediately, passing the correct category
+                formatted_batch = self._format_raw_results(matched_results, media_type=category)
+                for result_dict in formatted_batch:
+                    if result_dict['id'] not in processed_ids:
+                        all_formatted_results.append(result_dict)
+                        processed_ids.add(result_dict['id'])
+        
+        return all_formatted_results
+
+    def search_tmdb_raw(self, search_term, media_type='multi', year=None):
+        """
+        Performs a raw search on TMDb and returns a list of results.
+        """
+        search = Search()
+        results = []
+        stryear = str(year) if year else None
+        logger.info(f'Performing raw search for "{search_term}" in [{media_type}] with year: {stryear or "any"}')
+
+        try:
+            if media_type == 'tv':
+                results = search.tv_shows(term=search_term, adult=True)
+            elif media_type == 'movie':
+                results = search.movies(term=search_term, adult=True, year=stryear)
+            else: # multi
+                results = search.multi(term=search_term, adult=True, page=1)
+        except Exception as e:
+            logger.error(f"TMDb API raw search failed for '{search_term}': {e}")
+            return []
+        
+        intyear = self._fix_year(year) if year else 0 # Ensure year is int or 0
+        matched_results = self._find_year_match_list(results, intyear)
+
+        return self._format_raw_results(matched_results, media_type)
+
     def search_tmdb(self, torinfo):
         try:
             return self._search_tmdb(torinfo)
@@ -382,6 +483,34 @@ class TMDbSearcher:
                     return item
         
         return matchList[0]
+
+    def _find_year_match_list(self, results, year):
+        matchList = []
+        
+        # Handle both list and dict from tmdbv3api
+        resultlist = results if isinstance(results, list) else results.get('results', [])
+
+        for result in resultlist:
+            resyear = self._get_year_from_datestr(getattr(result, 'release_date', '') or getattr(result, 'first_air_date', ''))
+            
+            if year == 0: # If no year specified, all results are potential matches
+                matchList.append(result)
+                continue
+
+            # Fuzzy match for year
+            if resyear == 0: # If result has no year, it's a potential match
+                matchList.append(result)
+            elif resyear in [year - 1, year, year + 1]: # Match within +/- 1 year
+                matchList.append(result)
+        
+        if not matchList:
+            return []
+
+        # Prioritize item with CJK title if language is Chinese
+        if self.tmdb and self.tmdb.language == 'zh-CN':
+            matchList.sort(key=lambda item: not contains_cjk(self._get_title(item)))
+        
+        return matchList
 
     def _fix_year(self, torinfo):
         intyear = torinfo.year

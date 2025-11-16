@@ -2,7 +2,7 @@ import os
 import sys
 import secrets
 import re
-from typing import Optional
+from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, APIRouter, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
@@ -84,6 +84,61 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
         return media_result
     
     raise HTTPException(status_code=404, detail=f'Could not find or create a media match for "{query.torname}"')
+
+@api_router.get("/tmdb/search", response_model=List[schemas.TMDbSearchResult])
+def search_tmdb_raw_endpoint(
+    query: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Performs a raw search on TMDb, intelligently handling different query types.
+    - IMDb ID (e.g., "tt123456")
+    - TMDb ID (e.g., "movie-12345" or "tv-54321")
+    - Torrent Name or Keyword
+    Returns a list of search results without creating any database entries.
+    """
+    if not query or not query.strip():
+        raise HTTPException(status_code=400, detail="Query parameter cannot be empty.")
+
+    def _format_torinfo_as_search_result(torinfo: TorrentInfo):
+        """Helper to convert a populated torinfo object into the search result format."""
+        if not torinfo.tmdb_id:
+            return None
+        return {
+            'id': torinfo.tmdb_id,
+            'title': torinfo.tmdb_title,
+            'original_title': torinfo.original_title,
+            'year': torinfo.year,
+            'media_type': torinfo.tmdb_cat,
+            'poster_path': torinfo.poster_path,
+            'overview': torinfo.overview,
+        }
+
+    # 1. Check for IMDb ID
+    if re.match(r'^tt\d+$', query):
+        torinfo = TorrentInfo(imdb_id=query)
+        if searcher.search_by_imdb_id(torinfo):
+            result = _format_torinfo_as_search_result(torinfo)
+            return [result] if result else []
+        return []
+
+    # 2. Check for TMDb ID (e.g., movie-12345)
+    tmdb_match = re.match(r'^(movie|tv)-(\d+)$', query)
+    if tmdb_match:
+        tmdb_cat, tmdb_id = tmdb_match.groups()
+        torinfo = TorrentInfo(tmdb_id=tmdb_id, tmdb_cat=tmdb_cat)
+        if searcher.search_tmdb_by_tmdbid(torinfo):
+            result = _format_torinfo_as_search_result(torinfo)
+            return [result] if result else []
+        return []
+
+    # 3. Treat as torrent name or keyword
+    torinfo = TorrentParser.parse(query)
+    if not torinfo.clean_title: # If parsing fails, treat as a simple keyword
+        torinfo = TorrentInfo(clean_title=query)
+    
+    return searcher.search_tmdb_list(torinfo)
+
 
 class TmdbSearchQuery(schemas.BaseModel):
     query: str
