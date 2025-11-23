@@ -35,6 +35,7 @@ class TorrentInfo:
     poster_path: Optional[str] = ''        # 
     release_air_date: Optional[str] = ''     # 
 
+    tmdb_genres: Optional[str] = ''
     genre_ids =[]
     tmdbDetails = None
     origin_country = ''
