@@ -425,6 +425,48 @@ class TMDbSearcher:
 
         return self._format_raw_results(matched_results, media_type)
 
+    def pick_best_raw_result(self, search_term, year=None, media_type='multi'):
+        """
+        Performs a raw TMDb search and returns the best-matching formatted result (dict),
+        preferring an exact year match when provided. Returns None if no candidates.
+        This consolidates the frontend-like raw search behavior for reuse.
+        """
+        try:
+            results = self.search_tmdb_raw(search_term, media_type=media_type, year=year)
+        except Exception:
+            return None
+
+        if not results:
+            return None
+
+        # Prefer exact year match
+        if year:
+            for r in results:
+                if r.get('year') == year:
+                    return r
+
+        # Fallback to the first candidate
+        return results[0]
+
+    def populate_torinfo_from_raw(self, torinfo, raw_result):
+        """
+        Populate basic fields on a TorrentInfo object from a formatted raw TMDb result dict.
+        Does not fetch full details; call `search_tmdb_by_tmdbid` afterwards to populate details.
+        """
+        if not raw_result:
+            return torinfo
+
+        torinfo.tmdb_id = str(raw_result.get('id'))
+        torinfo.tmdb_cat = raw_result.get('media_type') or 'movie'
+        torinfo.tmdb_title = raw_result.get('title') or raw_result.get('original_title')
+        torinfo.poster_path = raw_result.get('poster_path')
+        torinfo.overview = raw_result.get('overview')
+        # Only overwrite year if we don't already have a valid one
+        if not (isinstance(torinfo.year, int) and 1900 < torinfo.year < 2100):
+            torinfo.year = raw_result.get('year') or torinfo.year
+
+        return torinfo
+
     def search_tmdb(self, torinfo):
         try:
             return self._search_tmdb(torinfo)

@@ -261,36 +261,63 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
 
     # 6. Blind search on TMDb
     logger.info(f"INFO: No local match found. Performing blind search on TMDb for: {torinfo.clean_title}, {torinfo.cntitle}, {torinfo.extitle}")
-    # strip_tile本地没有，以从torname 中解析出的 clean_title, cntitle 和 subtitle 解析出的 extitle，进行 search_tmdb
+
+    # First try a raw TMDb search (same route as the frontend's /tmdb/search) to get a list
+    # of candidate results that respect the provided year. This reduces mismatch between
+    # frontend searches and backend blind searches.
+    # Use TMDbSearcher helper to pick best raw result (aligns with frontend behavior)
+    search_term = torinfo.clean_title or torinfo.cntitle or torinfo.extitle or torinfo.torname
+    chosen = None
+    try:
+        chosen = searcher.pick_best_raw_result(search_term, year=torinfo.year)
+    except Exception as e:
+        logger.debug(f"pick_best_raw_result failed: {e}")
+
+    if chosen:
+        try:
+            # Populate torinfo from the chosen candidate
+            searcher.populate_torinfo_from_raw(torinfo, chosen)
+
+            # Fetch full details to populate additional fields
+            if searcher.search_tmdb_by_tmdbid(torinfo):
+                if media := find_media_by_tmdb_id(db, torinfo.tmdb_cat, torinfo.tmdb_id):
+                    logger.info(f"LOCAL: Found media by TMDb ID after blind search: {media.tmdb_title}")
+                    create_torrent(db, torinfo, media.id)
+                    return media
+
+                logger.debug(f"score: {torinfo.id_score}")
+                if torinfo.id_score < 19:
+                    logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
+                    media_data = _create_media_schema_from_torinfo(torinfo)
+                    torrent_data = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
+                    response_media = schemas.TdbMedia(**media_data.model_dump())
+                    response_media.torrents.append(schemas.TdbTorrent(**torrent_data.model_dump()))
+                    return response_media
+
+                logger.info(f"TMDb: Found media by blind search: {torinfo.tmdb_title}")
+                new_media = create_media_from_torinfo(db, torinfo)
+                create_torrent(db, torinfo, new_media.id)
+                return new_media
+        except Exception as e:
+            logger.error(f"Error while using chosen raw TMDb result: {e}")
+
+    # Fallback: try the existing blind search method which has more heuristics
     if searcher.search_tmdb(torinfo):
-        # After blind search, torinfo is populated with TMDb data.
-        # Check again if this TMDb ID already exists locally.
-        # TODO: strip title 有问题？
         if media := find_media_by_tmdb_id(db, torinfo.tmdb_cat, torinfo.tmdb_id):
             logger.info(f"LOCAL: Found media by TMDb ID after blind search: {media.tmdb_title}")
             create_torrent(db, torinfo, media.id)
             return media
 
-        # If score is too low, do not save to DB, but return the result for caller.
         logger.debug(f"score: {torinfo.id_score}")
         if torinfo.id_score < 19:
             logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
-            # Manually create the Pydantic schema object to avoid SQLAlchemy conversion issues
             media_data = _create_media_schema_from_torinfo(torinfo)
             torrent_data = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
-
-            # Create a full TdbMedia schema object from the data
             response_media = schemas.TdbMedia(**media_data.model_dump())
-            
-            # Create the TdbTorrent schema object and add it to the list
             response_media.torrents.append(schemas.TdbTorrent(**torrent_data.model_dump()))
-
-            # The function's return type is now updated to reflect this possibility
             return response_media
 
-        # Create new media and torrent
         logger.info(f"TMDb: Found media by blind search: {torinfo.tmdb_title}")
-        # TODO: 保存 clean_title 以便后续查询
         new_media = create_media_from_torinfo(db, torinfo)
         create_torrent(db, torinfo, new_media.id)
         return new_media
