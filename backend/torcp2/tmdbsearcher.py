@@ -3,6 +3,7 @@ from imdb import Cinemagoer
 import re
 import time
 import itertools
+from types import SimpleNamespace
 from loguru import logger
 
 def tryint(instr):
@@ -169,6 +170,72 @@ class TMDbSearcher:
         
         return False
 
+    def _score_result(self, result, preferred_titles, year):
+        score = 0
+        title = self._get_title(result)
+        original_title = getattr(result, 'original_title', getattr(result, 'original_name', ''))
+        resyear = self._get_year_from_datestr(getattr(result, 'release_date', '') or getattr(result, 'first_air_date', ''))
+
+        # Year match bonus
+        if year and resyear == year:
+            score += 50
+        
+        # Title similarity
+        if preferred_titles:
+            for p in preferred_titles:
+                if not p:
+                    continue
+                
+                p_lower = p.strip().lower()
+                title_lower = title.strip().lower()
+                original_title_lower = original_title.strip().lower()
+
+                # exact match
+                if title_lower == p_lower or original_title_lower == p_lower:
+                    score += 100
+                
+                # contains
+                if p_lower in title_lower or p_lower in original_title_lower:
+                    score += 30
+
+                # LCS
+                lcs_len = longest_common_subsequence_length(p, title)
+                score += 2 * lcs_len
+
+                # consecutive match
+                cons_len, _, _ = find_longest_consecutive_match(p, title)
+                score += 3 * cons_len
+        
+        # CJK title bonus
+        if self.tmdb and getattr(self.tmdb, 'language', '') == 'zh-CN':
+            if contains_cjk(title) or contains_cjk(original_title):
+                score += 10
+        
+        # title length penalty (prefer shorter titles that are closer to search term length)
+        if preferred_titles and preferred_titles[0]:
+            score -= abs(len(title) - len(preferred_titles[0]))
+
+        return score
+
+    def _find_best_match(self, candidates, preferred_titles, year):
+        if not candidates:
+            return None
+        
+        best_result = None
+        max_score = -float('inf')
+        
+        for res in candidates:
+            score = self._score_result(res, preferred_titles, year)
+            logger.trace(f"Scoring '{self._get_title(res)}' against '{preferred_titles}': {score}")
+            if score > max_score:
+                max_score = score
+                best_result = res
+        
+        if best_result:
+            logger.debug(f"Best match for '{preferred_titles}': '{self._get_title(best_result)}' with score {max_score}")
+        
+        return best_result
+
     def _perform_search(self, search_term, search_cat, year):
         search = Search()
         results = []
@@ -189,20 +256,27 @@ class TMDbSearcher:
             return None, None
 
         if not results:
-            # TODO: search without year?
             return None, None
 
-        result = self._find_year_match(results, year, strict=True)
-        if result:
-            return result, 'strict'
+        preferred_titles = [search_term]
+        # Find best match with strict year check
+        strict_candidates = self._find_year_match_list(results, year, strict=True)
+        best_strict = self._find_best_match(strict_candidates, preferred_titles, year)
+        if best_strict:
+            return best_strict, 'strict'
 
-        result = self._find_year_match(results, year, strict=False)
-        if result:
-            return result, 'fuzzy'
+        # If no strict match, find best match with fuzzy year check
+        fuzzy_candidates = self._find_year_match_list(results, year, strict=False)
+        best_fuzzy = self._find_best_match(fuzzy_candidates, preferred_titles, year)
+        if best_fuzzy:
+            return best_fuzzy, 'fuzzy'
             
         # No year match (or year was 0)
         if not year:
-             return self._find_year_match(results, 0), 'any'
+             any_year_candidates = self._find_year_match_list(results, 0)
+             best_any = self._find_best_match(any_year_candidates, preferred_titles, year)
+             if best_any:
+                return best_any, 'any'
 
         return None, None
 
@@ -343,15 +417,15 @@ class TMDbSearcher:
             release_date = getattr(result, date_attr, '')
             year = self._get_year_from_datestr(release_date)
 
-            processed_results.append({
-                'id': result.id,
-                'title': title,
-                'original_title': getattr(result, 'original_title', getattr(result, 'original_name', '')),
-                'year': year,
-                'media_type': media_cat,
-                'poster_path': getattr(result, 'poster_path', ''),
-                'overview': getattr(result, 'overview', ''),
-            })
+            processed_results.append(SimpleNamespace(
+                id=result.id,
+                title=title,
+                original_title=getattr(result, 'original_title', getattr(result, 'original_name', '')),
+                year=year,
+                media_type=media_cat,
+                poster_path=getattr(result, 'poster_path', ''),
+                overview=getattr(result, 'overview', ''),
+            ))
         return processed_results
 
     def search_tmdb_list(self, torinfo):
@@ -429,14 +503,7 @@ class TMDbSearcher:
         """
         Performs a raw TMDb search and returns the best-matching formatted result (dict).
 
-        Selection strategy (weighted):
-        - Exact title match to any `preferred_titles` (highest priority)
-        - Exact Chinese title (`preferred_titles` may include `cntitle`) prioritized
-        - Exact year match preferred
-        - Longest common subsequence and longest consecutive substring between
-          preferred title and candidate title contribute to score
-        - Fallback: first candidate
-
+        Selection strategy now uses the centralized `_find_best_match` method.
         `preferred_titles` should be a list of strings (e.g. [cntitle, clean_title, extitle]).
         """
         try:
@@ -449,67 +516,27 @@ class TMDbSearcher:
 
         # Normalize preferred_titles
         preferred = [p for p in (preferred_titles or []) if p]
+        if not preferred and search_term:
+            preferred = [search_term]
+
 
         # Quick pass: prefer exact title & year matches
         if preferred:
             for p in preferred:
-                for r in results:
+                for r_obj in results:
+                    r = vars(r_obj)
                     if r.get('title') and r.get('title').strip().lower() == p.strip().lower():
                         if not year or r.get('year') == year:
                             return r
 
-        # Scoring pass
-        best = None
-        best_score = -10**9
-        for r in results:
-            score = 0
-            title = (r.get('title') or '')
-            orig = (r.get('original_title') or '')
+        # Find the best match using the centralized scoring function
+        best_result_obj = self._find_best_match(results, preferred, year)
 
-            # Year match bonus
-            if year and r.get('year') == year:
-                score += 50
+        if best_result_obj:
+            return vars(best_result_obj)
 
-            # If preferred titles present, compute similarity
-            for p in preferred:
-                if not p:
-                    continue
-                # exact match (case-insensitive)
-                if title.strip().lower() == p.strip().lower() or orig.strip().lower() == p.strip().lower():
-                    score += 100
-                # contains
-                if p.strip().lower() in title.strip().lower() or p.strip().lower() in orig.strip().lower():
-                    score += 30
-                # LCS length
-                lcs_len = longest_common_subsequence_length(p, title)
-                score += 2 * lcs_len
-                # Longest consecutive match gives stronger signal
-                cons_len, _, _ = find_longest_consecutive_match(p, title)
-                score += 3 * cons_len
-
-            # prefer CJK titles when searching in Chinese language
-            if self.tmdb and getattr(self.tmdb, 'language', '') == 'zh-CN':
-                if contains_cjk(title) or contains_cjk(orig):
-                    score += 10
-
-            # shorter titles that match more closely get slight bonus
-            score -= abs(len(title) - (len(preferred[0]) if preferred else len(title))) // 2
-
-            if score > best_score:
-                best_score = score
-                best = r
-
-        # If we found a best candidate with positive score return it, otherwise fallback to year-first or first
-        if best and best_score > -10**8:
-            return best
-
-        # If nothing scored well, prefer any exact year match (fallback)
-        if year:
-            for r in results:
-                if r.get('year') == year:
-                    return r
-
-        return results[0]
+        # Fallback to first result if no good match is found
+        return vars(results[0]) if results else None
 
     def populate_torinfo_from_raw(self, torinfo, raw_result):
         """
@@ -553,43 +580,9 @@ class TMDbSearcher:
             titlestr = re.sub(f'\\b{roman}\\b', arabic, titlestr, flags=re.IGNORECASE)
         return titlestr
 
-    def _find_year_match(self, results, year, strict=True):
-        matchList = []
-        
-        # Handle both list and dict from tmdbv3api
-        resultlist = results if isinstance(results, list) else results.get('results', [])
 
-        for result in resultlist:
-            resyear = self._get_year_from_datestr(getattr(result, 'release_date', '') or getattr(result, 'first_air_date', ''))
-            
-            if year == 0:
-                matchList.append(result)
-                continue
 
-            if strict:
-                if resyear == year:
-                    matchList.append(result)
-            else: # fuzzy
-                if resyear == 0:
-                    matchList.append(result)
-                elif resyear in [year - 1, year, year + 1]:
-                    matchList.append(result)
-                else:
-                    return None
-        
-        
-        if not matchList:
-            return None
-
-        # Prefer item with CJK title if language is Chinese
-        if self.tmdb and self.tmdb.language == 'zh-CN':
-            for item in matchList[:3]:
-                if contains_cjk(self._get_title(item)):
-                    return item
-        
-        return matchList[0]
-
-    def _find_year_match_list(self, results, year):
+    def _find_year_match_list(self, results, year, strict=False):
         matchList = []
         
         # Handle both list and dict from tmdbv3api
@@ -601,19 +594,15 @@ class TMDbSearcher:
             if year == 0: # If no year specified, all results are potential matches
                 matchList.append(result)
                 continue
-
-            # Fuzzy match for year
-            if resyear == 0: # If result has no year, it's a potential match
-                matchList.append(result)
-            elif resyear in [year - 1, year, year + 1]: # Match within +/- 1 year
-                matchList.append(result)
-        
-        if not matchList:
-            return []
-
-        # Prioritize item with CJK title if language is Chinese
-        if self.tmdb and self.tmdb.language == 'zh-CN':
-            matchList.sort(key=lambda item: not contains_cjk(self._get_title(item)))
+            
+            if strict:
+                if resyear == year:
+                    matchList.append(result)
+            else: # fuzzy
+                if resyear == 0: # If result has no year, it's a potential match
+                    matchList.append(result)
+                elif resyear in [year - 1, year, year + 1]: # Match within +/- 1 year
+                    matchList.append(result)
         
         return matchList
 
