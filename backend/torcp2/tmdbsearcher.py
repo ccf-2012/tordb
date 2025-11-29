@@ -425,11 +425,19 @@ class TMDbSearcher:
 
         return self._format_raw_results(matched_results, media_type)
 
-    def pick_best_raw_result(self, search_term, year=None, media_type='multi'):
+    def pick_best_raw_result(self, search_term, year=None, media_type='multi', preferred_titles=None):
         """
-        Performs a raw TMDb search and returns the best-matching formatted result (dict),
-        preferring an exact year match when provided. Returns None if no candidates.
-        This consolidates the frontend-like raw search behavior for reuse.
+        Performs a raw TMDb search and returns the best-matching formatted result (dict).
+
+        Selection strategy (weighted):
+        - Exact title match to any `preferred_titles` (highest priority)
+        - Exact Chinese title (`preferred_titles` may include `cntitle`) prioritized
+        - Exact year match preferred
+        - Longest common subsequence and longest consecutive substring between
+          preferred title and candidate title contribute to score
+        - Fallback: first candidate
+
+        `preferred_titles` should be a list of strings (e.g. [cntitle, clean_title, extitle]).
         """
         try:
             results = self.search_tmdb_raw(search_term, media_type=media_type, year=year)
@@ -439,13 +447,68 @@ class TMDbSearcher:
         if not results:
             return None
 
-        # Prefer exact year match
+        # Normalize preferred_titles
+        preferred = [p for p in (preferred_titles or []) if p]
+
+        # Quick pass: prefer exact title & year matches
+        if preferred:
+            for p in preferred:
+                for r in results:
+                    if r.get('title') and r.get('title').strip().lower() == p.strip().lower():
+                        if not year or r.get('year') == year:
+                            return r
+
+        # Scoring pass
+        best = None
+        best_score = -10**9
+        for r in results:
+            score = 0
+            title = (r.get('title') or '')
+            orig = (r.get('original_title') or '')
+
+            # Year match bonus
+            if year and r.get('year') == year:
+                score += 50
+
+            # If preferred titles present, compute similarity
+            for p in preferred:
+                if not p:
+                    continue
+                # exact match (case-insensitive)
+                if title.strip().lower() == p.strip().lower() or orig.strip().lower() == p.strip().lower():
+                    score += 100
+                # contains
+                if p.strip().lower() in title.strip().lower() or p.strip().lower() in orig.strip().lower():
+                    score += 30
+                # LCS length
+                lcs_len = longest_common_subsequence_length(p, title)
+                score += 2 * lcs_len
+                # Longest consecutive match gives stronger signal
+                cons_len, _, _ = find_longest_consecutive_match(p, title)
+                score += 3 * cons_len
+
+            # prefer CJK titles when searching in Chinese language
+            if self.tmdb and getattr(self.tmdb, 'language', '') == 'zh-CN':
+                if contains_cjk(title) or contains_cjk(orig):
+                    score += 10
+
+            # shorter titles that match more closely get slight bonus
+            score -= abs(len(title) - (len(preferred[0]) if preferred else len(title))) // 2
+
+            if score > best_score:
+                best_score = score
+                best = r
+
+        # If we found a best candidate with positive score return it, otherwise fallback to year-first or first
+        if best and best_score > -10**8:
+            return best
+
+        # If nothing scored well, prefer any exact year match (fallback)
         if year:
             for r in results:
                 if r.get('year') == year:
                     return r
 
-        # Fallback to the first candidate
         return results[0]
 
     def populate_torinfo_from_raw(self, torinfo, raw_result):

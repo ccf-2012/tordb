@@ -269,7 +269,8 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
     search_term = torinfo.clean_title or torinfo.cntitle or torinfo.extitle or torinfo.torname
     chosen = None
     try:
-        chosen = searcher.pick_best_raw_result(search_term, year=torinfo.year)
+        preferred_titles = [torinfo.cntitle, torinfo.clean_title, torinfo.extitle]
+        chosen = searcher.pick_best_raw_result(search_term, year=torinfo.year, preferred_titles=preferred_titles)
     except Exception as e:
         logger.debug(f"pick_best_raw_result failed: {e}")
 
