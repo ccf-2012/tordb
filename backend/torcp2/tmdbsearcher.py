@@ -468,9 +468,9 @@ class TMDbSearcher:
                 # Format the results immediately, passing the correct category
                 formatted_batch = self._format_raw_results(matched_results, media_type=category)
                 for result_dict in formatted_batch:
-                    if result_dict['id'] not in processed_ids:
+                    if result_dict.id not in processed_ids:
                         all_formatted_results.append(result_dict)
-                        processed_ids.add(result_dict['id'])
+                        processed_ids.add(result_dict.id)
         
         return all_formatted_results
 
