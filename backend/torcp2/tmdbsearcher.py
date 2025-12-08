@@ -5,6 +5,7 @@ import time
 import itertools
 from types import SimpleNamespace
 from loguru import logger
+import requests
 
 def tryint(instr):
     try:
@@ -80,6 +81,10 @@ class TMDbSearcher:
             self.tmdb = TMDb()
             self.tmdb.api_key = tmdb_api_key
             self.tmdb.language = tmdb_lang
+            # Create a new session with a timeout
+            session = requests.Session()
+            session.timeout = 30  # Set a 30-second timeout for all requests
+            self.tmdb.session = session
         else:
             self.tmdb = None
 
