@@ -249,6 +249,10 @@ class TMDbSearcher:
                 results = search.tv_shows(term=search_term, adult=True)
             elif search_cat == 'movie':
                 results = search.movies(term=search_term, adult=True, year=stryear)
+                # If movie search with year returns nothing, retry without year
+                if not results and stryear:
+                    logger.info(f'Retrying search for "{search_term}" in [movie] without year.')
+                    results = search.movies(term=search_term, adult=True, year=None)
             else: # multi
                 results = search.multi(term=search_term, adult=True, page=1) # year not supported in multi
         except Exception as e:
@@ -358,9 +362,12 @@ class TMDbSearcher:
 
     def _clean_title(self, title):
         # A helper to consolidate title cleaning regex
+        title = re.sub(r'\s*[(（]\d{4}年?[)）]', '', title, flags=re.I) # 移除 (1957) 或 （1957年）
+        title = re.sub(r'\[[^\]]*\]', '', title) # 移除方括号内容
         title = re.sub(r'^(Jade|\w{2,3}TV)\s+', '', title, flags=re.I)
         title = re.sub(r'\b(Extended|Anthology|Trilogy|Quadrilogy|Tetralogy|Collections?)\s*$', '', title, flags=re.I)
-        title = re.sub(r'\b(HD|S\d+|E\d+|V\d+|4K|DVD|CORRECTED|UnCut|SP)\s*$', '', title, flags=re.I)
+        # 移除各种质量/版本标识, 不再限制只在结尾
+        title = re.sub(r'\b(HD|S\d+|E\d+|V\d+|4K|DVD|BluRay|WEB-DL|REMASTERED|CORRECTED|UnCut|SP)\b', '', title, flags=re.I)
         title = re.sub(r'^\s*(剧集|BBC：?|TLOTR|Jade|Documentary|【[^】]*】)', '', title, flags=re.I)
         title = re.sub(r'(\d+部曲|全\d+集.*|原盘|系列|\s[^\s]*压制.*)\s*$', '', title, flags=re.I)
         title = re.sub(r'(\b国粤双语|[\b\(]?\w+版|\b\d+集全).*$', '', title, flags=re.I)
@@ -577,7 +584,7 @@ class TMDbSearcher:
     def _replace_roman_num(self, titlestr):
         roman_map = {'II': '2', 'III': '3', 'IV': '4', 'V': '5', 'VI': '6', 'VII': '7', 'VIII': '8', 'IX': '9', 'XI': '11', 'XII': '12', 'XIII': '13', 'XIV': '14', 'XV': '15', 'XVI': '16'}
         for roman, arabic in roman_map.items():
-            titlestr = re.sub(f'\\b{roman}\\b', arabic, titlestr, flags=re.IGNORECASE)
+            titlestr = re.sub(f'\b{roman}\b', arabic, titlestr, flags=re.IGNORECASE)
         return titlestr
 
 
