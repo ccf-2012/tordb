@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func, or_
 import re
 from . import models, schemas
 from torcp2.torinfo import TorrentInfo
@@ -9,10 +10,6 @@ from loguru import logger
 
 def get_media(db: Session, media_id: int):
     return db.query(models.TdbMedia).filter(models.TdbMedia.id == media_id).first()
-
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
-from . import models, schemas
 
 def get_all_media(db: Session, skip: int = 0, limit: int = 100):
     # Query for paginated media items, sorted by creation date
@@ -203,6 +200,30 @@ def delete_torrent(db: Session, torrent_id: int) -> models.TdbTorrent | None:
 # --- Main Search Logic ---
 
 def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
+    # Handle override: delete existing matching media entries before searching
+    if override:
+        # Collect all titles that might match
+        search_titles = {torinfo.clean_title, torinfo.cntitle, torinfo.extitle}
+        search_titles = {title for title in search_titles if title}
+        
+        if search_titles:
+            # Delete media entries matching these titles
+            matching_media = db.query(models.TdbMedia).filter(
+                or_(
+                    models.TdbMedia.clean_title.in_(search_titles),
+                    models.TdbMedia.cntitle.in_(search_titles)
+                )
+            ).all()
+            
+            for media in matching_media:
+                logger.info(f"OVERRIDE: Deleting existing media: {media.tmdb_title} (clean_title: {media.clean_title}, cntitle: {media.cntitle})")
+                # Delete associated torrents first
+                db.query(models.TdbTorrent).filter(models.TdbTorrent.media_id == media.id).delete()
+                # Delete the media entry
+                db.delete(media)
+            
+            db.commit()
+
     # 1. TMDb ID provided
     if torinfo.tmdb_id and torinfo.tmdb_cat:
         logger.info(f"INFO: TMDb ID provided: {torinfo.tmdb_cat}-{torinfo.tmdb_id}")
