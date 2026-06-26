@@ -533,13 +533,24 @@ class TMDbSearcher:
 
 
         # Quick pass: prefer exact title & year matches
+        exact_matches = []
         if preferred:
             for p in preferred:
+                if not p:
+                    continue
+                normalized_p = p.strip().lower()
                 for r_obj in results:
                     r = vars(r_obj)
-                    if r.get('title') and r.get('title').strip().lower() == p.strip().lower():
+                    title_lower = (r.get('title') or '').strip().lower()
+                    original_title_lower = (r.get('original_title') or '').strip().lower()
+                    if title_lower == normalized_p or original_title_lower == normalized_p:
                         if not year or r.get('year') == year:
-                            return r
+                            exact_matches.append(r_obj)
+
+        if exact_matches:
+            best_exact = self._find_best_match(exact_matches, preferred, year)
+            if best_exact:
+                return vars(best_exact)
 
         # Find the best match using the centralized scoring function
         best_result_obj = self._find_best_match(results, preferred, year)

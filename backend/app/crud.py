@@ -287,11 +287,12 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
     # of candidate results that respect the provided year. This reduces mismatch between
     # frontend searches and backend blind searches.
     # Use TMDbSearcher helper to pick best raw result (aligns with frontend behavior)
-    search_term = torinfo.clean_title or torinfo.cntitle or torinfo.extitle or torinfo.torname
+    search_term = torinfo.extitle or torinfo.cntitle or torinfo.clean_title or torinfo.torname
+    media_type = 'tv' if torinfo.season or torinfo.tmdb_cat == 'tv' else 'multi'
     chosen = None
     try:
-        preferred_titles = [torinfo.cntitle, torinfo.clean_title, torinfo.extitle]
-        chosen = searcher.pick_best_raw_result(search_term, year=torinfo.year, preferred_titles=preferred_titles)
+        preferred_titles = [torinfo.extitle, torinfo.cntitle, torinfo.clean_title]
+        chosen = searcher.pick_best_raw_result(search_term, year=torinfo.year, media_type=media_type, preferred_titles=preferred_titles)
     except Exception as e:
         logger.debug(f"pick_best_raw_result failed: {e}")
 
