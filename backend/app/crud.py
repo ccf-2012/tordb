@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_  
 import re
 from . import models, schemas
 from torcp2.torinfo import TorrentInfo
@@ -43,20 +43,21 @@ def find_torrent_by_name(db: Session, name: str) -> models.TdbTorrent | None:
     return db.query(models.TdbTorrent).filter(models.TdbTorrent.name == name).first()
 
 def find_media_by_torinfo(db: Session, torinfo: TorrentInfo) -> models.TdbMedia | None:
-    # 1. Aggregate all potential titles from torinfo
-    search_titles = {torinfo.clean_title, torinfo.cntitle, torinfo.extitle}
-    # Filter out None or empty strings
-    search_titles = {title for title in search_titles if title}
+    # # 1. Aggregate all potential titles from torinfo
+    # search_titles = {torinfo.clean_title, torinfo.cntitle, torinfo.extitle}
+    # # Filter out None or empty strings
+    # search_titles = {title for title in search_titles if title}
 
-    if not search_titles:
-        return None
+    # if not search_titles:
+    #     return None
 
     # 2. Query the database using the aggregated titles
     # Find media where clean_title OR cntitle is in our set of search_titles
     candidates = db.query(models.TdbMedia).filter(
-        or_(
-            models.TdbMedia.clean_title.in_(search_titles),
-            models.TdbMedia.cntitle.in_(search_titles)
+        and_(
+            models.TdbMedia.clean_title == torinfo.clean_title,
+            models.TdbMedia.tmdb_cat == torinfo.tmdb_cat,
+            models.TdbMedia.cntitle == torinfo.cntitle
         )
     ).all()
 
