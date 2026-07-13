@@ -197,10 +197,28 @@ def delete_torrent(db: Session, torrent_id: int) -> models.TdbTorrent | None:
         db.commit()
     return db_torrent
 
+
+def is_all_chinese(s: str) -> bool:
+    """检查字符串是否主要由中文组成"""
+    if not s:
+        return False
+    # 检查是否包含至少一个中文字符，并且排除掉纯数字或特殊字符的情况
+    # \u4e00-\u9fff 是中文 Unicode 范围
+    return any('\u4e00' <= char <= '\u9fff' for char in s)
+
+def weak_title(torinfo: TorrentInfo) -> bool:
+    if (torinfo.clean_title == torinfo.cntitle):
+        if is_all_chinese(torinfo.clean_title) and len(torinfo.clean_title) < 5:
+            return True
+    return False
+
+
 # --- Main Search Logic ---
 
 def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
     # Handle override: delete existing matching media entries before searching
+    SCORE_LIMIT = 19
+
     if override:
         # Collect all titles that might match
         search_titles = {torinfo.clean_title, torinfo.cntitle, torinfo.extitle}
@@ -309,7 +327,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
                     return media
 
                 logger.debug(f"score: {torinfo.id_score}")
-                if torinfo.id_score < 19:
+                if (torinfo.id_score < SCORE_LIMIT) or weak_title(torinfo) :
                     logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
                     media_data = _create_media_schema_from_torinfo(torinfo)
                     torrent_data = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
@@ -332,7 +350,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
             return media
 
         logger.debug(f"score: {torinfo.id_score}")
-        if torinfo.id_score < 19:
+        if torinfo.id_score < SCORE_LIMIT or weak_title(torinfo):
             logger.warning(f"BLIND id_score too low: {torinfo.id_score} for {torinfo.torname}")
             media_data = _create_media_schema_from_torinfo(torinfo)
             torrent_data = schemas.TdbTorrentCreate(name=torinfo.torname, infolink=torinfo.infolink)
