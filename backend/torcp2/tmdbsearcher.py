@@ -329,7 +329,7 @@ class TMDbSearcher:
         if intyear > 1900:
             torinfo.id_score += 10
 
-        logger.debug(f"Search ==>  title: {title}, cntitle: {cntitle}, extitle: {extitle}, year:{intyear}  init id_score: {torinfo.id_score}")
+        logger.debug(f"Search ==>  title: {title}, cntitle: {cntitle}, extitle: {extitle}, year:{intyear}, tmdb_cat:{torinfo.tmdb_cat}  init id_score: {torinfo.id_score}")
 
         search_list = self._build_search_list(torinfo, cntitle, cuttitle, extitle)
         logger.debug(f"search list: {search_list}")
@@ -386,10 +386,10 @@ class TMDbSearcher:
         searches = []
         if torinfo.season:
             torinfo.id_score += 5
-            searches = [('tv', extitle), ('tv', cntitle), ('tv', cuttitle), ('multi', cntitle)]
+            searches = [('tv', cuttitle), ('tv', cntitle), ('tv', extitle), ('multi', cuttitle), ('multi', cntitle)]
         elif torinfo.tmdb_cat == 'tv':
             torinfo.id_score += 5
-            searches = [('tv', extitle), ('multi', cuttitle), ('multi', cntitle)]
+            searches = [('tv', extitle), ('tv', cuttitle), ('tv', cntitle), ('multi', cntitle), ('multi', cuttitle)]
         elif torinfo.tmdb_cat == 'movie':
             searches = [('movie', extitle),  ('movie', cuttitle), ('movie', cntitle), ('multi', cuttitle), ('multi', cntitle)]
         else:
