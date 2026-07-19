@@ -257,3 +257,37 @@ def test_search_tmdb_not_found(tmdb_searcher):
     assert torinfo.id_score == 30
     assert torinfo.tmdb_id == ''
 
+
+def test_search_tmdb_tv_show_year_fallback(mocker):
+    """
+    Tests that a TV show search falls back to 'any' year match when strict/fuzzy year matching fails.
+    For example, filename says S01 2026, but the series premiered in 2024.
+    """
+    # 1. Arrange
+    # Mock the TMDb API key check during instantiation
+    mocker.patch('backend.torcp2.tmdbsearcher.TMDb')
+    searcher = TMDbSearcher(tmdb_api_key='fake_key')
+    searcher._fill_tmdb_details = MagicMock()
+
+    # We want to test _perform_search directly, but mock search.tv_shows
+    mock_search = MagicMock()
+    mocker.patch('backend.torcp2.tmdbsearcher.Search', return_value=mock_search)
+
+    mock_result = MagicMock()
+    mock_result.id = 270845
+    mock_result.media_type = 'tv'
+    mock_result.name = "二龙湖·“村”暖花开"
+    mock_result.first_air_date = "2024-10-11"
+    mock_result.release_date = None
+
+    mock_search.tv_shows.return_value = [mock_result]
+
+    # 2. Act
+    result, match_type = searcher._perform_search("二龙湖·村暖花开", "tv", 2026)
+
+    # 3. Assert
+    assert result is not None
+    assert result.id == 270845
+    assert match_type == 'any'
+
+

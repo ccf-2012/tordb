@@ -8,7 +8,7 @@ import pytest
 # Add the parent directory to the Python path to find the `app` module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.main import app, get_db
+from app.main import app, get_db, verify_api_key
 from app.models import Base
 
 # --- Test Database Setup ---
@@ -32,6 +32,7 @@ def override_get_db():
 
 # Apply the dependency override to the app
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[verify_api_key] = lambda: None
 
 client = TestClient(app)
 

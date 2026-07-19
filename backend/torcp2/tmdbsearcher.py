@@ -280,8 +280,8 @@ class TMDbSearcher:
         if best_fuzzy:
             return best_fuzzy, 'fuzzy'
             
-        # No year match (or year was 0)
-        if not year:
+        # No year match (or year was 0 or TV show)
+        if not year or search_cat == 'tv':
              any_year_candidates = self._find_year_match_list(results, 0)
              best_any = self._find_best_match(any_year_candidates, preferred_titles, year)
              if best_any:
