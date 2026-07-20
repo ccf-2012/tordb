@@ -76,3 +76,10 @@ yarn-error.log*
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local Python environment configurations
+pyrightconfig.json
+*.toml
+*.settings.json
+.agents/
+pyproject.toml
