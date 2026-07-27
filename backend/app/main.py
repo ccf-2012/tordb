@@ -33,9 +33,12 @@ async def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Ke
 # Create a router for all API endpoints that will be protected
 api_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
-# Initialize TMDbSearcher at startup using the key from config
-# pydantic will raise an error on startup if the key is missing.
-searcher = TMDbSearcher(tmdb_api_key=settings.tmdb_api_key)
+# Initialize TMDbSearcher at startup using settings from config
+searcher = TMDbSearcher(
+    tmdb_api_key=settings.tmdb_api_key,
+    timeout=getattr(settings, 'tmdb_timeout', 6.0),
+    mirrors=getattr(settings, 'tmdb_mirrors', None)
+)
 
 @app.on_event("startup")
 def on_startup():

@@ -214,9 +214,24 @@ def weak_title(torinfo: TorrentInfo) -> bool:
     return False
 
 
+import threading
+
+_query_locks_guard = threading.Lock()
+_query_locks = {}
+
 # --- Main Search Logic ---
 
 def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
+    torname_key = torinfo.torname or torinfo.clean_title or "unknown_torname"
+    with _query_locks_guard:
+        if torname_key not in _query_locks:
+            _query_locks[torname_key] = threading.Lock()
+        lock = _query_locks[torname_key]
+
+    with lock:
+        return _search_and_create_media_impl(db, torinfo, searcher, override)
+
+def _search_and_create_media_impl(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
     # Handle override: delete existing matching media entries before searching
     SCORE_LIMIT = 19
 

@@ -11,6 +11,11 @@ class Settings:
         if not self.tmdb_api_key or 'your_api_key' in self.tmdb_api_key:
             raise ValueError("TMDb API key is missing or invalid. Please set the TORDB_TMDB_API_KEY environment variable.")
 
+        # TMDB timeout and mirror settings
+        self.tmdb_timeout = float(os.getenv('TORDB_TMDB_TIMEOUT') or parser.get("tmdb", "timeout", fallback="6.0"))
+        mirrors_raw = os.getenv('TORDB_TMDB_MIRRORS') or parser.get("tmdb", "mirrors", fallback="api.themoviedb.org,api.tmdb.org")
+        self.tmdb_mirrors = [m.strip() for m in mirrors_raw.split(',') if m.strip()]
+
         # Security
         self.tordb_api_key = os.getenv('TORDB_API_KEY') or parser.get("security", "api_key", fallback=None)
         if not self.tordb_api_key:

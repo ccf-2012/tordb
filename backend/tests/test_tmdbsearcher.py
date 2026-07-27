@@ -291,3 +291,24 @@ def test_search_tmdb_tv_show_year_fallback(mocker):
     assert match_type == 'any'
 
 
+def test_tmdb_mirror_failover(mocker):
+    """
+    Tests TMDbSearcher mirror list initialization and failover functionality.
+    """
+    mocker.patch('backend.torcp2.tmdbsearcher.TMDb')
+    searcher = TMDbSearcher(
+        tmdb_api_key='fake_key',
+        timeout=5.0,
+        mirrors=['https://mirror1.com/3', 'mirror2.com']
+    )
+
+    assert searcher.timeout == 5.0
+    assert searcher.mirrors == ['mirror1.com', 'mirror2.com']
+    assert searcher.tmdb._base == 'https://mirror1.com/3'
+
+    # Trigger mirror switch
+    searcher.switch_to_next_mirror()
+    assert searcher.current_mirror_idx == 1
+    assert searcher.tmdb._base == 'https://mirror2.com/3'
+
+

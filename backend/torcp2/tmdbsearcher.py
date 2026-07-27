@@ -7,6 +7,9 @@ from types import SimpleNamespace
 from loguru import logger
 import requests
 
+from requests.adapters import HTTPAdapter
+import urllib.parse
+
 def tryint(instr):
     try:
         return int(instr)
@@ -76,17 +79,111 @@ def find_longest_consecutive_match(str1, str2):
 
 
 class TMDbSearcher:
-    def __init__(self, tmdb_api_key, tmdb_lang='zh-CN'):
+    def __init__(self, tmdb_api_key, tmdb_lang='zh-CN', timeout=6.0, mirrors=None):
+        self.timeout = float(timeout) if timeout else 6.0
+
+        # Parse and sanitize mirror list
+        raw_mirrors = mirrors if isinstance(mirrors, list) else (mirrors.split(',') if isinstance(mirrors, str) else [])
+        cleaned_mirrors = []
+        for m in raw_mirrors:
+            m_str = m.strip()
+            if not m_str:
+                continue
+            if m_str.startswith('http://') or m_str.startswith('https://'):
+                parsed = urllib.parse.urlparse(m_str)
+                m_str = parsed.netloc or parsed.path
+            m_str = m_str.rstrip('/')
+            if m_str and m_str not in cleaned_mirrors:
+                cleaned_mirrors.append(m_str)
+
+        if not cleaned_mirrors:
+            cleaned_mirrors = ['api.themoviedb.org', 'api.tmdb.org']
+
+        self.mirrors = cleaned_mirrors
+        self.current_mirror_idx = 0
+
         if tmdb_api_key:
             self.tmdb = TMDb()
             self.tmdb.api_key = tmdb_api_key
             self.tmdb.language = tmdb_lang
-            # Create a new session with a timeout
+
+            # Create session with large connection pool
             session = requests.Session()
-            session.timeout = 30  # Set a 30-second timeout for all requests
+            adapter = HTTPAdapter(pool_connections=50, pool_maxsize=50)
+            session.mount('https://', adapter)
+            session.mount('http://', adapter)
             self.tmdb.session = session
+
+            self._update_tmdb_base_url()
+            self._apply_request_patches()
         else:
             self.tmdb = None
+
+    def _update_tmdb_base_url(self):
+        if self.tmdb:
+            domain = self.mirrors[self.current_mirror_idx]
+            self.tmdb._base = f"https://{domain}/3"
+
+    def switch_to_next_mirror(self):
+        if len(self.mirrors) > 1:
+            prev_domain = self.mirrors[self.current_mirror_idx]
+            self.current_mirror_idx = (self.current_mirror_idx + 1) % len(self.mirrors)
+            next_domain = self.mirrors[self.current_mirror_idx]
+            logger.warning(f"TMDb API domain failed ({prev_domain}). Switching to mirror: {next_domain}")
+            self._update_tmdb_base_url()
+        else:
+            logger.warning(f"TMDb API request failed on {self.mirrors[0]}")
+
+    def _apply_request_patches(self):
+        default_timeout = self.timeout
+        searcher_self = self
+
+        # 1. Patch tmdbv3api.tmdb.TMDb.cached_request
+        def patched_cached_request(method, url, data=None, json=None, proxies=None):
+            for mirror_attempt in range(len(searcher_self.mirrors)):
+                current_domain = searcher_self.mirrors[searcher_self.current_mirror_idx]
+                parsed = urllib.parse.urlparse(url)
+                if parsed.netloc and parsed.netloc != current_domain:
+                    new_url = urllib.parse.urlunparse(parsed._replace(netloc=current_domain))
+                else:
+                    new_url = url
+
+                try:
+                    return requests.request(method, new_url, data=data, json=json, proxies=proxies, timeout=default_timeout)
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+                    logger.warning(f"TMDb cached_request to {current_domain} failed: {e}")
+                    searcher_self.switch_to_next_mirror()
+
+            # Final fallback
+            current_domain = searcher_self.mirrors[searcher_self.current_mirror_idx]
+            parsed = urllib.parse.urlparse(url)
+            new_url = urllib.parse.urlunparse(parsed._replace(netloc=current_domain)) if parsed.netloc else url
+            return requests.request(method, new_url, data=data, json=json, proxies=proxies, timeout=default_timeout)
+
+        TMDb.cached_request = staticmethod(patched_cached_request)
+
+        # 2. Patch self.tmdb.session.request for non-cached requests
+        orig_session_request = self.tmdb.session.request
+
+        def patched_session_request(method, url, **kwargs):
+            if 'timeout' not in kwargs or kwargs['timeout'] is None:
+                kwargs['timeout'] = default_timeout
+
+            for mirror_attempt in range(len(searcher_self.mirrors)):
+                current_domain = searcher_self.mirrors[searcher_self.current_mirror_idx]
+                parsed = urllib.parse.urlparse(url)
+                if parsed.netloc and parsed.netloc != current_domain:
+                    url = urllib.parse.urlunparse(parsed._replace(netloc=current_domain))
+
+                try:
+                    return orig_session_request(method, url, **kwargs)
+                except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.RequestException) as e:
+                    logger.warning(f"TMDb session request to {current_domain} failed: {e}")
+                    searcher_self.switch_to_next_mirror()
+
+            return orig_session_request(method, url, **kwargs)
+
+        self.tmdb.session.request = patched_session_request
 
     def _save_tmdb_result(self, torinfo, result, media_type=None):
         if not result:
