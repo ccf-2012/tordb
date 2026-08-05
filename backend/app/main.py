@@ -78,6 +78,8 @@ def search_media_by_torname_post(query: schemas.Query, db: Session = Depends(get
     if query.infolink:
         torinfo.infolink = query.infolink
 
+    if not torinfo.cntitle and query.extitle:
+        torinfo.cntitle = query.extitle
     # Call the main search logic in crud
     media_result = crud.search_and_create_media(db, torinfo, searcher, query.override)
 
