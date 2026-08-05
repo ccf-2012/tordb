@@ -348,15 +348,15 @@ class TMDbSearcher:
         try:
             if search_cat == 'tv':
                 # no year for tv
-                results = search.tv_shows(term=search_term, adult=True)
+                results = search.tv_shows(term=search_term, adult=False)
             elif search_cat == 'movie':
-                results = search.movies(term=search_term, adult=True, year=stryear)
+                results = search.movies(term=search_term, adult=False, year=stryear)
                 # If movie search with year returns nothing, retry without year
                 if not results and stryear:
                     logger.info(f'Retrying search for "{search_term}" in [movie] without year.')
-                    results = search.movies(term=search_term, adult=True, year=None)
+                    results = search.movies(term=search_term, adult=False, year=None)
             else: # multi
-                results = search.multi(term=search_term, adult=True, page=1) # year not supported in multi
+                results = search.multi(term=search_term, adult=False, page=1) # year not supported in multi
         except Exception as e:
             logger.error(f"TMDb API search failed for '{search_term}': {e}")
             return None, None
@@ -559,11 +559,11 @@ class TMDbSearcher:
             
             try:
                 if category == 'tv':
-                    results = search.tv_shows(term=term, adult=True)
+                    results = search.tv_shows(term=term, adult=False)
                 elif category == 'movie':
-                    results = search.movies(term=term, adult=True, year=str(intyear) if intyear else None)
+                    results = search.movies(term=term, adult=False, year=str(intyear) if intyear else None)
                 else: # multi
-                    results = search.multi(term=term, adult=True, page=1)
+                    results = search.multi(term=term, adult=False, page=1)
             except Exception as e:
                 logger.error(f"TMDb API search failed for '{term}': {e}")
                 continue
@@ -594,11 +594,11 @@ class TMDbSearcher:
 
         try:
             if media_type == 'tv':
-                results = search.tv_shows(term=search_term, adult=True)
+                results = search.tv_shows(term=search_term, adult=False)
             elif media_type == 'movie':
-                results = search.movies(term=search_term, adult=True, year=stryear)
+                results = search.movies(term=search_term, adult=False, year=stryear)
             else: # multi
-                results = search.multi(term=search_term, adult=True, page=1)
+                results = search.multi(term=search_term, adult=False, page=1)
         except Exception as e:
             logger.error(f"TMDb API raw search failed for '{search_term}': {e}")
             return []
