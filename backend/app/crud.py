@@ -214,6 +214,15 @@ def weak_title(torinfo: TorrentInfo) -> bool:
     return False
 
 
+def is_custom_media(media: models.TdbMedia) -> bool:
+    """判断媒体条目是否为自定义条目 (tmdb_id 为空、<= 0 或 tmdb_cat 为 'custom')"""
+    if media.tmdb_id is None or media.tmdb_id <= 0:
+        return True
+    if media.tmdb_cat == 'custom':
+        return True
+    return False
+
+
 import threading
 
 _query_locks_guard = threading.Lock()
@@ -232,7 +241,7 @@ def search_and_create_media(db: Session, torinfo: TorrentInfo, searcher: TMDbSea
         return _search_and_create_media_impl(db, torinfo, searcher, override)
 
 def _search_and_create_media_impl(db: Session, torinfo: TorrentInfo, searcher: TMDbSearcher, override: bool = False) -> models.TdbMedia | schemas.TdbMedia | None:
-    # Handle override: delete existing matching media entries before searching
+    # Handle override: delete existing matching media entries before searching (excluding custom entries)
     SCORE_LIMIT = 19
 
     if override:
@@ -250,6 +259,9 @@ def _search_and_create_media_impl(db: Session, torinfo: TorrentInfo, searcher: T
             ).all()
             
             for media in matching_media:
+                if is_custom_media(media):
+                    logger.info(f"OVERRIDE: Preserving custom media: {media.tmdb_title} (clean_title: {media.clean_title}, tmdb_id: {media.tmdb_id})")
+                    continue
                 logger.info(f"OVERRIDE: Deleting existing media: {media.tmdb_title} (clean_title: {media.clean_title}, cntitle: {media.cntitle})")
                 # Delete associated torrents first
                 db.query(models.TdbTorrent).filter(models.TdbTorrent.media_id == media.id).delete()
